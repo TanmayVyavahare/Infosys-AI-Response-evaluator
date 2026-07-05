@@ -2,7 +2,6 @@
 
 Aegis is an automated, reference-grounded AI Response Quality Evaluator designed to audit LLM responses on relevance, accuracy, completeness, and context grounding.
 It rates the AI on four main criteria:
-
 Relevance: Did the AI actually answer the user's question?
 Accuracy: Is the information factually correct?
 Groundedness: Did the AI stick to the provided source documents, or did it hallucinate (make things up)?
