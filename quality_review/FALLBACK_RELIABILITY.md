@@ -19,3 +19,12 @@ The screenshot answer naming George Washington and his service years was complet
 - Previous 16-scenario audit results remain historical evidence, separately documented. Automated regression totals measure software checks, not universal evaluator accuracy.
 
 For an interview, verify provider quota beforehand and inspect **AI review** versus **Local estimate** in each report. Any arbitrary question, reference, or answer can still expose judgment errors. A trustworthy evaluator should report uncertainty rather than pretend similarity proves truth.
+
+
+## Final verification
+
+[GitHub CI run 36465898391](https://github.com/TanmayVyavahare/Infosys-AI-Response-evaluator/actions/runs/36465898391) passed both jobs for code commit `3b5bcf58f62182f784173e87449189b6a4b581c1`, including the full backend suite, frontend tests, lint and production build.
+
+The final browser run returned in **5.25 seconds**, with 99% estimated relevance, 100% estimated completeness (2/2 requirements), unavailable fact checks, and an explicit daily quota warning. A preceding run spent 85.22 seconds waiting on the old quota retry behavior. These are two observed runs, not a latency benchmark.
+
+![Final local estimate with explicit quota warning](local-estimate-ui.png)

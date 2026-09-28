@@ -75,3 +75,6 @@ npm.cmd test --prefix frontend
 - Full local suite: 91 backend tests (including actual MiniLM/FAISS) and 17 frontend tests passed; frontend lint and production build passed.
 - The real embedding model loaded successfully in the approved process environment. Cached model loading now avoids repeated network metadata checks at startup.
 - Live Washington completeness returned 1.0. A subsequent diverse 12-case live audit stopped because Groq exhausted its daily token allowance; incomplete reports are retained in quality_review/demo-audit.json and are not evidence of a completed benchmark.
+
+- Final code commit 3b5bcf58f62182f784173e87449189b6a4b581c1 passed both GitHub CI jobs in run 36465898391. Local totals: 91 backend + 17 frontend = 108 tests.
+- Browser verification on 2026-09-29: 2/2 requirements covered, 100% estimated completeness, 99% estimated relevance, fact checks unavailable with an explicit quota warning; final response time 5.25 seconds. Screenshot: quality_review/local-estimate-ui.png.
