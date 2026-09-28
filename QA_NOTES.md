@@ -1,5 +1,15 @@
 # UI and functionality review — 28 September 2026
 
+## GitHub publication verification
+
+A clean Linux CI run passed **64 backend tests and 16 frontend tests**, plus frontend lint and the production build. This includes real MiniLM embedding, FAISS retrieval, and disk-cache tests, confirming the native-model failures below are specific to the restricted Windows environment. The previously inconsistent unknown-fact case also passed a targeted live accuracy recheck after the final guard. The full benchmark remains documented as 15/16 from its latest complete comparison.
+
+- [Verified CI run](https://github.com/TanmayVyavahare/Infosys-AI-Response-evaluator/actions/runs/36461226724)
+- [CI verification record](quality_review/ci-verification.json)
+- [Focused live accuracy result](quality_review/final-accuracy-check.json)
+
+The following sections preserve the earlier local findings and test counts.
+
 ## Follow-up evaluation-quality audit
 
 The follow-up request tested 16 synthetic scenarios against Groq and inspected the full reports. The baseline met 10 of 16 behavior expectations; the latest completed comparison met 15 of 16. Changes address partial evidence, incomplete answers, justified abstention, evidence conflicts, claim classifications, and misleading confidence. The remaining inconsistent unknown-fact classification led to a final verbatim contradiction-evidence guard. Its regression tests pass; live verification of that last guard is pending because Groq exhausted its daily token quota. See [the detailed quality report](quality_review/REPORT.md) for exact observations, raw reports, limitations, and reproduction commands.

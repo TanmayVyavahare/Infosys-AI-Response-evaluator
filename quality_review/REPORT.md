@@ -4,7 +4,9 @@
 
 The original grading was not reliable enough to accept at face value. Six of the 16 synthetic cases exposed rubric or reporting problems. The latest completed comparison meets the defined expectations for **15 of 16 cases**, up from **10 of 16** in the baseline. These are behavior checks on a small synthetic set, not a measured general accuracy rate.
 
-The remaining case is inconsistent classification of an unknown launch year. A final guard now requires an actual, verbatim contradictory passage before accepting an `INCORRECT` factual verdict. Its validation/retry behavior passes deterministic tests, but the full live recheck could not finish because Groq reached its daily token quota. The evaluator is improved, but it is **not yet fully verified**.
+The remaining case in that full comparison was inconsistent classification of an unknown launch year. A final guard now requires an actual, verbatim contradictory passage before accepting an `INCORRECT` factual verdict. Its validation/retry behavior passes deterministic tests. A subsequent **focused live accuracy recheck passed**, returning `UNVERIFIABLE` with a null accuracy score. The full 16-case comparison was not rerun after that change because of quota limits, so 15/16 remains the honest full-comparison figure.
+
+For publication readiness, **64 backend tests and 16 frontend tests passed on a clean Linux GitHub runner**, including real MiniLM embeddings, FAISS search and disk-cache reuse. Frontend lint and the production build also passed. [Verified CI run](https://github.com/TanmayVyavahare/Infosys-AI-Response-evaluator/actions/runs/36461226724); [machine-readable record](ci-verification.json).
 
 ## What was tested
 
@@ -27,7 +29,7 @@ Scores below are out of 100. A high available-check score does not mean unsuppor
 | approximation | Excellent (100.0) | Excellent (100.0) | Meets expectation |
 | unit conversion | Excellent (100.0) | Excellent (100.0) | Meets expectation |
 | unsupported extra | Excellent (85.8) | Limited Evidence (86.7) | Meets expectation |
-| unknown fact | Critical Hallucination (22.5) | Factually Unreliable (22.5) | Needs final live recheck |
+| unknown fact | Critical Hallucination (22.5) | Factually Unreliable (22.5) | Focused accuracy recheck later passed; full rerun pending |
 | no evidence | Excellent (100.0) | Limited Evidence (100.0) | Meets expectation |
 | appropriate abstention | Good (80.0) | Excellent (100.0) | Meets expectation |
 | reference extra detail | Excellent (100.0) | Excellent (100.0) | Meets expectation |
@@ -42,11 +44,13 @@ Scores below are out of 100. A high available-check score does not mean unsuppor
 3. **Answering one of four requests was scored inconsistently and labeled “Acceptable.”** Completeness is now derived from the requirement list: covered = 1, partial = 0.5, missing = 0. This case correctly gets 25% completeness and an `Incomplete` verdict. Missing details do not reduce topical relevance in the latest recheck.
 4. **A justified “the source does not say” answer received zero completeness.** Completeness now receives source context and recognizes justified abstention for an unanswerable source-only question. This case reached 100% completeness in both subsequent completed runs.
 5. **Conflicting reference/source facts were called a hallucination.** They now produce `Conflicting Evidence` with the conflicting claim retained and an explicit warning to resolve the sources.
-6. **An unknown year was treated as false.** One rerun correctly treated it as unverifiable, but a later recheck regressed. The final prompt explicitly separates missing evidence from contradictory evidence, and the backend rejects an `INCORRECT` claim without a real source/reference quote. That final change remains pending a completed live recheck.
+6. **An unknown year was treated as false.** One rerun correctly treated it as unverifiable, but a later recheck regressed. The final prompt explicitly separates missing evidence from contradictory evidence, and the backend rejects an `INCORRECT` claim without a real source/reference quote. A later targeted live check returned `UNVERIFIABLE`; [the saved result](final-accuracy-check.json) explicitly records that this was an accuracy-only recheck, not a new four-metric benchmark run.
 
 Additional safeguards reject malformed/non-finite scores, derive claim and coverage scores from their detail rows, remove invented confidence percentages, and preserve the provider error when local fallback is also unavailable. Groq retries respect the provider's requested delay within a bounded two-minute budget; daily quota waits longer than that fail promptly with an understandable message.
 
 ## Validation and evidence
+
+Publication follow-up: **80/80 automated tests passed in Linux CI** (64 backend, including two new real-model/search integration tests; 16 frontend). The counts below describe the earlier Windows audit and remain as historical evidence.
 
 - Frontend: **16 tests passed**; production build and lint passed.
 - Backend provider/workflow/quality regressions: **41 tests passed** after the final changes, including absent contradiction quotes, retry to `UNVERIFIABLE`, daily quota handling, and preserving the failure reason.
@@ -59,7 +63,7 @@ Raw evidence: [baseline](before-paced.json), [first rerun](after.json), [six tar
 
 ## Remaining limitations and next verification
 
-- Repeat `unknown_fact`, known incorrect facts, and the two additional cases when Groq quota is available. A verbatim quote check prevents invented citations; semantic interpretation of a real quote still depends on the model. This is not a proof of factual correctness.
+- The final `unknown_fact` accuracy-only recheck passed. Repeat the complete case, known incorrect facts, and the two additional cases when Groq quota is available. A verbatim quote check prevents invented citations; semantic interpretation of a real quote still depends on the model. This is not a proof of factual correctness.
 - Windows Application Control blocks `sklearn.utils.murmurhash` on this machine. Long-document semantic retrieval and local fallback scoring remain unavailable until an approved dependency installation is available. Device protections were not altered.
 - The claim checks are tested on short supplied sources. This audit does not establish robustness on arbitrary long documents, languages, domains, or sophisticated prompt injection.
 

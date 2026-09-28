@@ -1,0 +1,33 @@
+{
+  "case_id": "unknown_fact",
+  "scope": "Targeted accuracy-only recheck of the final contradiction-evidence guard; not a new full four-metric benchmark run.",
+  "result": {
+    "metric_name": "accuracy",
+    "score": null,
+    "evidence_coverage": 0.0,
+    "reason": "The AI response contains a claim that Orion was launched in 2019, but neither the reference answer nor the source context provide any information about a launch date. There is no contradictory evidence, only a lack of supporting evidence, so the claim is unverifiable.",
+    "evidence": [
+      "Reference answer: \"Orion is a subscription plan.\"",
+      "Source context: \"The Orion plan costs 20 credits per month. It includes 5 projects and email support. It does not include phone support. The trial lasts 14 days.\""
+    ],
+    "strengths": [],
+    "weaknesses": [
+      "The claim that Orion launched in 2019 cannot be verified because the provided reference and source do not mention a launch year."
+    ],
+    "suggestions": [
+      "Provide a reliable source that states the launch year of Orion, or remove the claim if no such source exists.",
+      "If the question is about a product named Orion, clarify whether it refers to a subscription plan or a different entity."
+    ],
+    "claims": [
+      {
+        "claim": "Orion launched in 2019.",
+        "verdict": "UNVERIFIABLE",
+        "supported": null,
+        "score": null,
+        "evidence": "Reference answer and source context do not mention a launch year for Orion."
+      }
+    ],
+    "requirements": [],
+    "evaluated_with": "llm"
+  }
+}

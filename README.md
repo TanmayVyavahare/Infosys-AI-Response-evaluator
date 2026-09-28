@@ -32,13 +32,13 @@ This example intentionally has no reference or source. The report explains that 
 |---|---|---|
 | Synthetic quality audit | **16 distinct scenarios** | Correct answers, wrong facts, omissions, paraphrases, unit conversions, missing evidence, source conflicts, abstention, and embedded grading instructions |
 | Case expectations met | **10/16 → 15/16** in the latest completed comparison | Five additional cases met the defined rubric; this is a small regression sample, **not** a general model-accuracy claim |
-| Automated test inventory | **64 backend + 16 frontend cases** | Covers evaluator behavior, evidence rules, API validation, retrieval, CSV import, cancellation, state preservation, and report actions |
+| Automated verification | **80/80 tests passed in Linux CI**: 64 backend + 16 frontend | Includes real MiniLM embeddings, FAISS retrieval/cache, evidence rules, API validation, CSV import, cancellation, state preservation, and report actions |
 | Batch capacity | **50 rows**, **3 responses in flight** | Implemented and tested limits; no unmeasured throughput or speedup claim |
 | Default retrieval | **384-dimensional embeddings**, **top 5 chunks** | MiniLM + normalized FAISS inner-product search; configurable chunking and thresholds |
 
-The final unknown-fact safeguard passed deterministic tests, but its complete live recheck was blocked by Groq's daily token quota. The [quality review](quality_review/REPORT.md) includes the unsuccessful run as well as the successful ones. [Raw baseline](quality_review/before-paced.json) and [latest completed reports](quality_review/latest-completed.json) make the comparison inspectable.
+The final unknown-fact safeguard passed deterministic tests and a later [focused live accuracy recheck](quality_review/final-accuracy-check.json), correctly returning `UNVERIFIABLE`. The complete 16-case benchmark was not rerun after that guard because of provider quota limits, so the table retains the last full comparison. The [quality review](quality_review/REPORT.md) includes unsuccessful runs as well as successful ones. [Raw baseline](quality_review/before-paced.json) and [latest completed reports](quality_review/latest-completed.json) make the comparison inspectable.
 
-See [CI runs](https://github.com/TanmayVyavahare/Infosys-AI-Response-evaluator/actions) for the results on a clean Linux environment, and [QA notes](QA_NOTES.md) for local browser checks and environment limitations.
+The [verified CI run](https://github.com/TanmayVyavahare/Infosys-AI-Response-evaluator/actions/runs/36461226724) passed all 80 tests, frontend lint, and the production build on a clean Linux environment. See [CI runs](https://github.com/TanmayVyavahare/Infosys-AI-Response-evaluator/actions) for subsequent results, and [QA notes](QA_NOTES.md) for local browser checks and environment limitations.
 
 ## Quick start
 
@@ -247,4 +247,4 @@ Use these as implementation-backed project descriptions, with the audit scope ke
 - Built a React/TypeScript and FastAPI evaluation application with **four concurrent quality dimensions**, claim-level evidence, requirement coverage, and explainable verdicts.
 - Implemented **384-dimensional MiniLM embeddings**, FAISS retrieval, source chunking, and disk caching, alongside an interchangeable interface for **four LLM providers**.
 - Added **50-row CSV evaluation** with validated column mapping, bounded concurrency, per-row inspection, and JSON/print report exports.
-- Designed a **16-scenario synthetic regression audit** and improved satisfied case expectations from **10 to 15**, correcting misleading evidence, coverage, and source-conflict reporting; added automated frontend/backend checks and CI.
+- Designed a **16-scenario synthetic regression audit** and improved satisfied case expectations from **10 to 15**, correcting misleading evidence, coverage, and source-conflict reporting; added **80 automated tests passing in Linux CI**, including real embedding/search integration checks.

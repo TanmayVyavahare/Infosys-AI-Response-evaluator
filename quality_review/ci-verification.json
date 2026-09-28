@@ -1,0 +1,16 @@
+{
+  "repository": "TanmayVyavahare/Infosys-AI-Response-evaluator",
+  "workflow_run_id": 36461226724,
+  "url": "https://github.com/TanmayVyavahare/Infosys-AI-Response-evaluator/actions/runs/36461226724",
+  "tested_commit": "7647c8ccccacaea0628ae2762d777ad98bf6c717",
+  "conclusion": "success",
+  "platform": "ubuntu-latest",
+  "python": "3.11",
+  "node": "24",
+  "backend_tests_passed": 64,
+  "frontend_tests_passed": 16,
+  "frontend_lint": "passed",
+  "frontend_production_build": "passed",
+  "real_embedding_and_faiss_integration": "passed",
+  "scope": "Automated tests do not make paid provider calls. Separate live audit evidence is stored alongside this record."
+}
