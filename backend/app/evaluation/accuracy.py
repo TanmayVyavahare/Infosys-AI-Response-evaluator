@@ -39,6 +39,12 @@ class AccuracyEvaluator(BaseEvaluator):
     def metric_name(self) -> str:
         return "accuracy"
 
+    async def evaluate(self, package: EvaluationPackage) -> MetricResult:
+        """Require evidence before either LLM or local fact checking."""
+        if not package.has_reference and not package.has_context:
+            return self._build_empty_baseline_result()
+        return await super().evaluate(package)
+
     def _build_llm_prompt(
         self, package: EvaluationPackage
     ) -> tuple[str, str]:

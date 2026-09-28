@@ -1,12 +1,13 @@
 /* ScoreGauge — animated SVG gauge with glowing gradient stroke */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 
 interface ScoreGaugeProps {
   score: number | null;
   size?: number;
   strokeWidth?: number;
   label?: string;
+  limited?: boolean;
 }
 
 function getGaugeColor(score: number): { stroke: string; glow: string; text: string; bg: string } {
@@ -17,8 +18,9 @@ function getGaugeColor(score: number): { stroke: string; glow: string; text: str
   return { stroke: '#f43f5e', glow: 'rgba(244, 63, 94, 0.5)', text: 'text-rose-400', bg: 'rgba(244, 63, 94, 0.06)' };
 }
 
-export function ScoreGauge({ score, size = 120, strokeWidth = 8, label }: ScoreGaugeProps) {
+export function ScoreGauge({ score, size = 120, strokeWidth = 8, label, limited = false }: ScoreGaugeProps) {
   const [animatedScore, setAnimatedScore] = useState(0);
+  const gaugeId = useId();
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
 
@@ -26,17 +28,17 @@ export function ScoreGauge({ score, size = 120, strokeWidth = 8, label }: ScoreG
     if (score === null || score === undefined) return;
     const duration = 1200;
     const start = performance.now();
+    let frame: number;
     const animate = (now: number) => {
       const progress = Math.min((now - start) / duration, 1);
       // Smooth easeOutExpo curve
       const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
       setAnimatedScore(score * eased);
-      if (progress < 1) requestAnimationFrame(animate);
+      if (progress < 1) frame = requestAnimationFrame(animate);
     };
-    requestAnimationFrame(animate);
+    frame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frame);
   }, [score]);
-
-  const gaugeId = `gauge-${Math.random().toString(36).slice(2, 9)}`;
 
   if (score === null || score === undefined) {
     return (
@@ -61,7 +63,9 @@ export function ScoreGauge({ score, size = 120, strokeWidth = 8, label }: ScoreG
     );
   }
 
-  const colorConfig = getGaugeColor(score);
+  const colorConfig = limited
+    ? { stroke: '#b45309', glow: 'transparent', text: 'text-amber-700', bg: 'rgba(245, 158, 11, 0.06)' }
+    : getGaugeColor(score);
   const offset = circumference - animatedScore * circumference;
 
   return (

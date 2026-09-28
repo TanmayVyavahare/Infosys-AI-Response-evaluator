@@ -1,89 +1,67 @@
-/* Custom hook for evaluation state management */
-
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { EvaluationRequest, EvaluationResponse, BatchEvaluationResponse } from '../types/evaluation';
 import { evaluateResponse, evaluateBatch } from '../services/api';
 
-interface UseEvaluationReturn {
-  result: EvaluationResponse | null;
-  batchResult: BatchEvaluationResponse | null;
-  loading: boolean;
-  error: string | null;
-  elapsed: number;
-  submit: (request: EvaluationRequest) => Promise<void>;
-  submitBatch: (requests: EvaluationRequest[]) => Promise<void>;
-  reset: () => void;
-}
-
-export function useEvaluation(): UseEvaluationReturn {
+export function useEvaluation() {
   const [result, setResult] = useState<EvaluationResponse | null>(null);
   const [batchResult, setBatchResult] = useState<BatchEvaluationResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
-  const [timerId, setTimerId] = useState<ReturnType<typeof setInterval> | null>(null);
+  const active = useRef<AbortController | null>(null);
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const submit = useCallback(async (request: EvaluationRequest) => {
+  const cancel = useCallback(() => {
+    active.current?.abort();
+    active.current = null;
+    if (timer.current) clearInterval(timer.current);
+    timer.current = null;
+    setLoading(false);
+  }, []);
+
+  useEffect(() => () => {
+    active.current?.abort();
+    if (timer.current) clearInterval(timer.current);
+  }, []);
+
+  const run = useCallback(async (request: EvaluationRequest | EvaluationRequest[]) => {
+    cancel();
+    const controller = new AbortController();
+    active.current = controller;
     setLoading(true);
     setError(null);
     setResult(null);
     setBatchResult(null);
     setElapsed(0);
-
-    // Start elapsed timer
     const start = Date.now();
-    const id = setInterval(() => {
-      setElapsed((Date.now() - start) / 1000);
-    }, 100);
-    setTimerId(id);
-
+    timer.current = setInterval(() => setElapsed((Date.now() - start) / 1000), 250);
     try {
-      const response = await evaluateResponse(request);
-      setResult(response);
+      if (Array.isArray(request)) {
+        const response = await evaluateBatch(request, controller.signal);
+        if (active.current === controller) setBatchResult(response);
+      } else {
+        const response = await evaluateResponse(request, controller.signal);
+        if (active.current === controller) setResult(response);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Evaluation failed');
+      if (active.current === controller && !controller.signal.aborted) {
+        setError(err instanceof Error ? err.message : 'Review failed. Please try again.');
+      }
     } finally {
-      clearInterval(id);
-      setElapsed((Date.now() - start) / 1000);
-      setLoading(false);
-      setTimerId(null);
+      if (active.current === controller) {
+        cancel();
+        setElapsed((Date.now() - start) / 1000);
+      }
     }
-  }, []);
-
-  const submitBatch = useCallback(async (requests: EvaluationRequest[]) => {
-    setLoading(true);
-    setError(null);
-    setResult(null);
-    setBatchResult(null);
-    setElapsed(0);
-
-    // Start elapsed timer
-    const start = Date.now();
-    const id = setInterval(() => {
-      setElapsed((Date.now() - start) / 1000);
-    }, 100);
-    setTimerId(id);
-
-    try {
-      const response = await evaluateBatch(requests);
-      setBatchResult(response);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Batch evaluation failed');
-    } finally {
-      clearInterval(id);
-      setElapsed((Date.now() - start) / 1000);
-      setLoading(false);
-      setTimerId(null);
-    }
-  }, []);
+  }, [cancel]);
 
   const reset = useCallback(() => {
+    cancel();
     setResult(null);
     setBatchResult(null);
     setError(null);
     setElapsed(0);
-    if (timerId) clearInterval(timerId);
-  }, [timerId]);
+  }, [cancel]);
 
-  return { result, batchResult, loading, error, elapsed, submit, submitBatch, reset };
+  return { result, batchResult, loading, error, elapsed, submit: run, submitBatch: run, reset, cancel };
 }

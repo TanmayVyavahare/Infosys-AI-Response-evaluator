@@ -50,6 +50,7 @@ class CompletenessEvaluator(BaseEvaluator):
             question=package.question,
             ai_response=package.ai_response,
             reference_answer=package.reference_answer,
+            context=package.context_text,
         )
         return prompt, COMPLETENESS_SYSTEM_MESSAGE
 

@@ -1,0 +1,420 @@
+[
+  {
+    "case": {
+      "id": "correct",
+      "question": "What does Orion cost and how many projects are included?",
+      "ai_response": "Orion costs 20 credits a month and includes 5 projects.",
+      "reference_answer": "20 credits monthly; 5 projects.",
+      "source_document": "The Orion plan costs 20 credits per month. It includes 5 projects and email support. It does not include phone support. The trial lasts 14 days.",
+      "expected": "High scores on all four checks."
+    },
+    "report": {
+      "metrics": {
+        "relevance": {
+          "metric_name": "relevance",
+          "score": 1.0,
+          "reason": "The response directly answers both parts of the question—cost and number of projects—without any off-topic content.",
+          "evidence": [
+            "\"Orion costs 20 credits a month\"",
+            "\"includes 5 projects\""
+          ],
+          "strengths": [
+            "Provides the exact cost and project count requested.",
+            "Keeps the answer concise and on topic."
+          ],
+          "weaknesses": [],
+          "suggestions": [],
+          "claims": [],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "accuracy": {
+          "metric_name": "accuracy",
+          "score": 1.0,
+          "reason": "Both factual claims in the AI response match the reference answer and the retrieved context exactly.",
+          "evidence": [
+            "\"Orion costs 20 credits a month\" matches the reference and context.",
+            "\"Includes 5 projects\" matches the reference and context."
+          ],
+          "strengths": [
+            "Accurate pricing information.",
+            "Accurate number of projects included."
+          ],
+          "weaknesses": [],
+          "suggestions": [
+            "None needed; the response is factually correct."
+          ],
+          "claims": [
+            {
+              "claim": "Orion costs 20 credits a month",
+              "supported": true,
+              "score": null,
+              "evidence": "Reference answer: 20 credits monthly; Retrieved context: The Orion plan costs 20 credits per month."
+            },
+            {
+              "claim": "Orion includes 5 projects",
+              "supported": true,
+              "score": null,
+              "evidence": "Reference answer: 5 projects; Retrieved context: It includes 5 projects."
+            }
+          ],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "groundedness": {
+          "metric_name": "groundedness",
+          "score": 1.0,
+          "reason": "Both factual claims in the AI response are directly supported by the provided context. No claim is unsupported or contradicted.",
+          "evidence": [
+            "\"The Orion plan costs 20 credits per month. It includes 5 projects and email support.\""
+          ],
+          "strengths": [
+            "Claim that Orion costs 20 credits a month is supported by the context.",
+            "Claim that Orion includes 5 projects is supported by the context."
+          ],
+          "weaknesses": [],
+          "suggestions": [
+            "None needed; the response is fully grounded."
+          ],
+          "claims": [
+            {
+              "claim": "Orion costs 20 credits a month",
+              "supported": true,
+              "score": null,
+              "evidence": "\"The Orion plan costs 20 credits per month.\""
+            },
+            {
+              "claim": "Orion includes 5 projects",
+              "supported": true,
+              "score": null,
+              "evidence": "\"It includes 5 projects and email support.\""
+            }
+          ],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "completeness": {
+          "metric_name": "completeness",
+          "score": 1.0,
+          "reason": "The AI response fully addresses both requested aspects of the question—cost and number of projects—matching the reference answer exactly.",
+          "evidence": [
+            "Cost: '20 credits a month' matches '20 credits monthly'; Projects: 'includes 5 projects' matches '5 projects'."
+          ],
+          "strengths": [
+            "Accurately states the monthly cost and the number of projects included.",
+            "Matches the reference answer precisely."
+          ],
+          "weaknesses": [],
+          "suggestions": [],
+          "claims": [],
+          "requirements": [
+            {
+              "requirement": "Provide the cost of Orion.",
+              "status": "covered",
+              "evidence": "Orion costs 20 credits a month"
+            },
+            {
+              "requirement": "State how many projects are included with Orion.",
+              "status": "covered",
+              "evidence": "includes 5 projects"
+            }
+          ],
+          "evaluated_with": "llm"
+        }
+      },
+      "warnings": [],
+      "overall_score": 1.0,
+      "verdict": "Excellent",
+      "confidence": 1.0,
+      "processing_time_seconds": 1.784,
+      "strengths": [
+        "Provides the exact cost and project count requested.",
+        "Keeps the answer concise and on topic.",
+        "Accurate pricing information.",
+        "Accurate number of projects included.",
+        "Claim that Orion costs 20 credits a month is supported by the context.",
+        "Claim that Orion includes 5 projects is supported by the context.",
+        "Accurately states the monthly cost and the number of projects included.",
+        "Matches the reference answer precisely."
+      ],
+      "weaknesses": [],
+      "recommendations": [
+        "None needed; the response is factually correct.",
+        "None needed; the response is fully grounded."
+      ]
+    }
+  },
+  {
+    "case": {
+      "id": "wrong_numbers",
+      "question": "What does Orion cost and how many projects are included?",
+      "ai_response": "Orion costs 200 credits per month and includes 50 projects.",
+      "reference_answer": "20 credits monthly; 5 projects.",
+      "source_document": "The Orion plan costs 20 credits per month. It includes 5 projects and email support. It does not include phone support. The trial lasts 14 days.",
+      "expected": "Relevant and complete, but inaccurate and contradicted; low overall score."
+    },
+    "report": {
+      "metrics": {
+        "relevance": {
+          "metric_name": "relevance",
+          "score": 1.0,
+          "reason": "The response directly answers both parts of the question—cost and number of projects—without any off-topic content.",
+          "evidence": [
+            "\"Orion costs 200 credits per month\"",
+            "\"includes 50 projects\""
+          ],
+          "strengths": [
+            "Provides the exact cost and project count requested.",
+            "Keeps the answer concise and on topic."
+          ],
+          "weaknesses": [],
+          "suggestions": [],
+          "claims": [],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "accuracy": {
+          "metric_name": "accuracy",
+          "score": 0.0,
+          "reason": "Both factual claims in the AI response contradict the provided reference and retrieved context.",
+          "evidence": [
+            "Reference answer states Orion costs 20 credits per month, not 200.",
+            "Reference answer states Orion includes 5 projects, not 50."
+          ],
+          "strengths": [],
+          "weaknesses": [
+            "Incorrect cost claim (200 vs 20 credits).",
+            "Incorrect project count claim (50 vs 5 projects)."
+          ],
+          "suggestions": [
+            "Use the correct figures from the reference: 20 credits per month and 5 projects.",
+            "Include additional details from the context if relevant, such as email support and 14‑day trial."
+          ],
+          "claims": [
+            {
+              "claim": "Orion costs 200 credits per month",
+              "supported": false,
+              "score": null,
+              "evidence": "Reference answer and retrieved context both state the cost is 20 credits per month."
+            },
+            {
+              "claim": "Orion includes 50 projects",
+              "supported": false,
+              "score": null,
+              "evidence": "Reference answer and retrieved context both state the plan includes 5 projects."
+            }
+          ],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "groundedness": {
+          "metric_name": "groundedness",
+          "score": 0.0,
+          "reason": "Both factual claims in the AI response are directly contradicted by the provided context. The context states that the Orion plan costs 20 credits per month and includes 5 projects, whereas the response claims 200 credits per month and 50 projects. No claim is supported by the context.",
+          "evidence": [
+            "The Orion plan costs 20 credits per month.",
+            "It includes 5 projects."
+          ],
+          "strengths": [],
+          "weaknesses": [
+            "Claim that Orion costs 200 credits per month is incorrect.",
+            "Claim that Orion includes 50 projects is incorrect."
+          ],
+          "suggestions": [
+            "Use the exact figures from the context: 20 credits per month and 5 projects.",
+            "Avoid making up numbers that are not present in the source material."
+          ],
+          "claims": [
+            {
+              "claim": "Orion costs 200 credits per month",
+              "supported": false,
+              "score": null,
+              "evidence": "The Orion plan costs 20 credits per month."
+            },
+            {
+              "claim": "Orion includes 50 projects",
+              "supported": false,
+              "score": null,
+              "evidence": "It includes 5 projects."
+            }
+          ],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "completeness": {
+          "metric_name": "completeness",
+          "score": 1.0,
+          "reason": "The AI response directly addresses both required aspects of the question: it states the cost of Orion and the number of projects included. Both pieces of information are present, so the response is fully complete with respect to the question.",
+          "evidence": [
+            "Orion costs 200 credits per month and includes 50 projects."
+          ],
+          "strengths": [
+            "Provides explicit cost information.",
+            "Provides explicit project count."
+          ],
+          "weaknesses": [],
+          "suggestions": [],
+          "claims": [],
+          "requirements": [
+            {
+              "requirement": "Provide the cost of Orion",
+              "status": "covered",
+              "evidence": "Orion costs 200 credits per month"
+            },
+            {
+              "requirement": "Provide the number of projects included with Orion",
+              "status": "covered",
+              "evidence": "includes 50 projects"
+            }
+          ],
+          "evaluated_with": "llm"
+        }
+      },
+      "warnings": [],
+      "overall_score": 0.225,
+      "verdict": "Critical Hallucination",
+      "confidence": 1.0,
+      "processing_time_seconds": 3.567,
+      "strengths": [
+        "Provides the exact cost and project count requested.",
+        "Keeps the answer concise and on topic.",
+        "Provides explicit cost information.",
+        "Provides explicit project count."
+      ],
+      "weaknesses": [
+        "Incorrect cost claim (200 vs 20 credits).",
+        "Incorrect project count claim (50 vs 5 projects).",
+        "Claim that Orion costs 200 credits per month is incorrect.",
+        "Claim that Orion includes 50 projects is incorrect."
+      ],
+      "recommendations": [
+        "Use the correct figures from the reference: 20 credits per month and 5 projects.",
+        "Include additional details from the context if relevant, such as email support and 14‑day trial.",
+        "Use the exact figures from the context: 20 credits per month and 5 projects.",
+        "Avoid making up numbers that are not present in the source material."
+      ]
+    }
+  },
+  {
+    "case": {
+      "id": "off_topic",
+      "question": "What does Orion cost?",
+      "ai_response": "Banana bread is delicious when served warm.",
+      "reference_answer": "20 credits per month.",
+      "source_document": "The Orion plan costs 20 credits per month. It includes 5 projects and email support. It does not include phone support. The trial lasts 14 days.",
+      "expected": "Off-topic; relevance and completeness near zero."
+    },
+    "report": {
+      "metrics": {
+        "relevance": {
+          "metric_name": "relevance",
+          "score": 0.0,
+          "reason": "The response does not address the question about Orion's cost at all.",
+          "evidence": [
+            "\"Banana bread is delicious when served warm.\""
+          ],
+          "strengths": [],
+          "weaknesses": [
+            "No mention of Orion or its cost; entirely off-topic."
+          ],
+          "suggestions": [
+            "Answer the question directly by providing the cost of Orion or explaining how to find that information."
+          ],
+          "claims": [],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "accuracy": {
+          "metric_name": "accuracy",
+          "score": null,
+          "reason": "Evaluation failed: DLL load failed while importing murmurhash: An Application Control policy has blocked this file.",
+          "evidence": [],
+          "strengths": [],
+          "weaknesses": [
+            "Could not evaluate: DLL load failed while importing murmurhash: An Application Control policy has blocked this file."
+          ],
+          "suggestions": [],
+          "claims": [],
+          "requirements": [],
+          "evaluated_with": "error"
+        },
+        "groundedness": {
+          "metric_name": "groundedness",
+          "score": 0.0,
+          "reason": "The AI response makes a claim about banana bread that is not mentioned or supported by any information in the provided context. No context passage references banana bread, its taste, or serving temperature, so the claim is unsupported.",
+          "evidence": [
+            "No relevant context passage found."
+          ],
+          "strengths": [],
+          "weaknesses": [
+            "Claim about banana bread is unsupported by the context."
+          ],
+          "suggestions": [
+            "Ensure that any factual statements in the response are directly supported by the provided context. If the context does not contain relevant information, the response should either omit the claim or explicitly state that it is not supported by the given source."
+          ],
+          "claims": [
+            {
+              "claim": "Banana bread is delicious when served warm.",
+              "supported": false,
+              "score": null,
+              "evidence": "No supporting evidence found"
+            }
+          ],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "completeness": {
+          "metric_name": "completeness",
+          "score": 0.0,
+          "reason": "The AI response does not address the question about Orion's cost, providing irrelevant content instead.",
+          "evidence": [
+            "The response \"Banana bread is delicious when served warm.\" does not mention Orion or its cost.",
+            "The reference answer \"20 credits per month.\" is also not reflected in the AI response."
+          ],
+          "strengths": [],
+          "weaknesses": [
+            "No mention of Orion's cost.",
+            "No reference to the provided reference answer."
+          ],
+          "suggestions": [
+            "Include the cost of Orion, e.g., \"Orion costs 20 credits per month.\"",
+            "If additional context is needed, explain what Orion is and any relevant pricing details."
+          ],
+          "claims": [],
+          "requirements": [
+            {
+              "requirement": "Answer the cost of Orion",
+              "status": "missing",
+              "evidence": "Not addressed"
+            },
+            {
+              "requirement": "Reference the provided cost figure (20 credits per month) if relevant",
+              "status": "missing",
+              "evidence": "Not addressed"
+            }
+          ],
+          "evaluated_with": "llm"
+        }
+      },
+      "warnings": [],
+      "overall_score": 0.0,
+      "verdict": "Off-Topic",
+      "confidence": 0.85,
+      "processing_time_seconds": 23.698,
+      "strengths": [],
+      "weaknesses": [
+        "No mention of Orion or its cost; entirely off-topic.",
+        "Could not evaluate: DLL load failed while importing murmurhash: An Application Control policy has blocked this file.",
+        "Claim about banana bread is unsupported by the context.",
+        "No mention of Orion's cost.",
+        "No reference to the provided reference answer."
+      ],
+      "recommendations": [
+        "Answer the question directly by providing the cost of Orion or explaining how to find that information.",
+        "Ensure that any factual statements in the response are directly supported by the provided context. If the context does not contain relevant information, the response should either omit the claim or explicitly state that it is not supported by the given source.",
+        "Include the cost of Orion, e.g., \"Orion costs 20 credits per month.\"",
+        "If additional context is needed, explain what Orion is and any relevant pricing details."
+      ]
+    }
+  }
+]

@@ -6,7 +6,8 @@ Returns metric reports, overall verdict, and processing time.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Body
+from typing import Annotated
 
 from app.schemas.requests import EvaluationRequest
 from app.schemas.responses import EvaluationResponse, BatchEvaluationResponse
@@ -77,7 +78,7 @@ async def evaluate(request: EvaluationRequest) -> EvaluationResponse:
     summary="Evaluate a batch of AI-generated responses",
     description="Submit a list of evaluation requests for concurrent multi-dimensional evaluation.",
 )
-async def evaluate_batch(requests: list[EvaluationRequest]) -> BatchEvaluationResponse:
+async def evaluate_batch(requests: Annotated[list[EvaluationRequest], Body(min_length=1, max_length=50)]) -> BatchEvaluationResponse:
     """Evaluate multiple AI responses.
 
     Args:

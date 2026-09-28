@@ -1,49 +1,39 @@
-/* API service for communicating with the Aegis backend */
-
 import type { EvaluationRequest, EvaluationResponse, BatchEvaluationResponse } from '../types/evaluation';
 
-const API_BASE = '/api';
-
-export async function evaluateResponse(
-  request: EvaluationRequest
-): Promise<EvaluationResponse> {
-  const res = await fetch(`${API_BASE}/evaluate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(request),
-  });
-
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ detail: 'Unknown error' }));
-    throw new Error(error.detail || `HTTP ${res.status}`);
+async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`/api/${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal,
+    });
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    throw new Error('Cannot reach the review service. Check your connection and make sure the backend is running, then try again.');
   }
-
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    const detail = data?.detail;
+    const message = typeof detail === 'string' ? detail : Array.isArray(detail)
+      ? detail.map((item: { loc?: (string | number)[]; msg?: string }) => `${item.loc?.slice(1).join(' → ') || 'Input'}: ${item.msg || 'Invalid value'}`).join('; ')
+      : res.status >= 500 ? 'The review service is unavailable. Make sure the backend is running, then try again.' : `Review failed (${res.status}). Please check your inputs.`;
+    throw new Error(message);
+  }
   return res.json();
 }
 
-export async function evaluateBatch(
-  requests: EvaluationRequest[]
-): Promise<BatchEvaluationResponse> {
-  const res = await fetch(`${API_BASE}/evaluate/batch`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(requests),
-  });
-
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ detail: 'Unknown error' }));
-    throw new Error(error.detail || `HTTP ${res.status}`);
-  }
-
-  return res.json();
+export function evaluateResponse(request: EvaluationRequest, signal?: AbortSignal) {
+  return post<EvaluationResponse>('evaluate', request, signal);
 }
 
-export async function healthCheck(): Promise<{
-  status: string;
-  app_name: string;
-  version: string;
-}> {
-  const res = await fetch(`${API_BASE}/health`);
-  if (!res.ok) throw new Error(`Health check failed: HTTP ${res.status}`);
+export function evaluateBatch(requests: EvaluationRequest[], signal?: AbortSignal) {
+  return post<BatchEvaluationResponse>('evaluate/batch', requests, signal);
+}
+
+export async function healthCheck() {
+  const res = await fetch('/api/health');
+  if (!res.ok) throw new Error('Review service unavailable');
   return res.json();
 }

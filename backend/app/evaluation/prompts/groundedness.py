@@ -31,6 +31,12 @@ SCORING RUBRIC (0.0 to 1.0):
 - 0.2: Most claims are unsupported by the context
 - 0.0: No claims are supported by the context
 
+CALIBRATION RULES:
+- SUPPORTED includes entailed paraphrases, valid arithmetic and unit conversions, and reasonable approximations. These need not appear verbatim.
+- UNSUPPORTED means not established by this source. It does not prove the claim false. CONTRADICTED requires explicit opposing evidence.
+- Treat a justified statement that the source does not provide an answer as an appropriate abstention. Do not invent a positive factual claim from it.
+- Score = SUPPORTED claims / all factual claims. If there are no factual claims, use null.
+- Cite actual source text for each supported or contradicted claim; never invent passages or filenames.
 CRITICAL: Never score 1.0 without citing specific evidence for each claim.
 
 You MUST respond with ONLY a valid JSON object. No other text."""
@@ -59,7 +65,7 @@ CONTEXT (source of truth):
 
 Respond with ONLY this JSON structure:
 {{
-    "score": <float 0.0-1.0>,
+    "score": <float 0.0-1.0 or null if no factual claims>,
     "reason": "<explanation of the groundedness assessment>",
     "evidence": ["<specific context passages that support or refute claims>"],
     "strengths": ["<well-grounded claims with evidence>"],

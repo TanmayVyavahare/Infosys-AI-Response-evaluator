@@ -26,6 +26,7 @@ from app.services.llm_provider import LLMProvider, LLMProviderFactory
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
+_AUTO_PROVIDER = object()
 
 
 class EvaluationCoordinator:
@@ -40,7 +41,7 @@ class EvaluationCoordinator:
 
     def __init__(
         self,
-        llm_provider: Optional[LLMProvider] = None,
+        llm_provider: Optional[LLMProvider] | object = _AUTO_PROVIDER,
         embedder: Optional[Embedder] = None,
         retriever: Optional[FAISSRetriever] = None,
     ) -> None:
@@ -49,10 +50,10 @@ class EvaluationCoordinator:
         self.settings = get_settings()
 
         # Try to create LLM provider; None means fallback-only mode
-        if llm_provider is not None:
-            self.llm_provider = llm_provider
-        else:
+        if llm_provider is _AUTO_PROVIDER:
             self.llm_provider = LLMProviderFactory.create_optional()
+        else:
+            self.llm_provider = llm_provider
 
         if self.llm_provider:
             logger.info(
@@ -140,6 +141,11 @@ class EvaluationCoordinator:
 
         return EvaluationResponse(
             metrics=metrics,
+            warnings=package.metadata.get("warnings", []) + (
+                ["The reference and source disagree. Resolve the conflicting evidence before relying on the score."] if verdict == "Conflicting Evidence" else []
+            ) + (
+                ["The overall score covers only assessable checks; it does not verify unsupported facts."] if verdict == "Limited Evidence" else []
+            ),
             overall_score=overall_score,
             verdict=verdict,
             confidence=confidence,
@@ -161,21 +167,28 @@ class EvaluationCoordinator:
             EvaluationPackage with all fields populated.
         """
         retrieved_context: list[dict] = []
+        warnings: list[str] = []
 
         # Run retrieval if source document is provided
         if request.source_document:
             try:
-                retrieved_context = self.retriever.retrieve_from_text(
-                    query=request.question,
-                    document_text=request.source_document,
-                    top_k=self.settings.retrieval_top_k,
-                )
+                # Short sources fit in full: preserve all evidence without requiring
+                # a vector model download or discarding a short but relevant fact.
+                if len(request.source_document) <= self.settings.chunk_size * self.settings.retrieval_top_k:
+                    retrieved_context = [{"text": request.source_document, "score": 1.0, "metadata": {"source": "provided_text"}}]
+                else:
+                    retrieved_context = self.retriever.retrieve_from_text(
+                        query=request.question,
+                        document_text=request.source_document,
+                        top_k=self.settings.retrieval_top_k,
+                    )
                 logger.info(
                     "Retrieved %d context chunks from source document",
                     len(retrieved_context),
                 )
             except Exception as exc:
                 logger.warning("Retrieval failed: %s", exc)
+                warnings.append("Source document search is unavailable. This review could not use your source text. Try a shorter excerpt or check the backend's embedding model setup.")
 
         return EvaluationPackage(
             question=request.question,
@@ -186,6 +199,7 @@ class EvaluationCoordinator:
                 "has_source_document": bool(request.source_document),
                 "has_reference": bool(request.reference_answer),
                 "context_chunks": len(retrieved_context),
+                "warnings": warnings,
             },
         )
 
@@ -207,14 +221,29 @@ class EvaluationCoordinator:
         # Weighted score calculation
         overall_score = self._calculate_weighted_score(available_scores)
 
-        # Rule overrides
+        # Labels distinguish missing evidence from demonstrated contradiction.
+        accuracy = metrics.get("accuracy")
+        evidence_conflict = accuracy is not None and any(c.verdict == "CONFLICTING" for c in accuracy.claims)
         verdict = self._apply_override_rules(available_scores)
-        if verdict:
-            if verdict == "Off-Topic":
-                overall_score = min(overall_score, available_scores["relevance"])
-            else:
-                overall_score *= self.settings.critical_penalty_factor
+        if available_scores.get("relevance", 1) < self.settings.off_topic_threshold:
+            verdict = "Off-Topic"
+            overall_score = min(overall_score, available_scores["relevance"])
+        elif evidence_conflict:
+            verdict = "Conflicting Evidence"
+        elif verdict:
+            overall_score *= self.settings.critical_penalty_factor
+        elif available_scores.get("completeness", 1) <= .5:
+            verdict = "Incomplete"
+            overall_score = min(overall_score, self.settings.verdict_acceptable - .01)
+        elif len(available_scores) < 4 or (accuracy is not None and accuracy.evidence_coverage is not None and accuracy.evidence_coverage < 1):
+            verdict = "Limited Evidence"
         else:
+            # A weak dimension must not disappear inside a high weighted average.
+            weakest = min(available_scores.values())
+            if weakest < self.settings.verdict_acceptable:
+                overall_score = min(overall_score, self.settings.verdict_good - .01)
+            elif weakest < self.settings.verdict_good:
+                overall_score = min(overall_score, self.settings.verdict_excellent - .01)
             verdict = self._determine_standard_verdict(overall_score)
 
         overall_score = round(max(0.0, min(1.0, overall_score)), 4)
@@ -242,15 +271,14 @@ class EvaluationCoordinator:
         if relevance is not None and relevance < self.settings.off_topic_threshold:
             return "Off-Topic"
 
-        # 2. Groundedness check (Hallucination)
-        groundedness = available_scores.get("groundedness")
-        if groundedness is not None and groundedness < self.settings.critical_hallucination_threshold:
-            return "Critical Hallucination"
-
-        # 3. Accuracy check (Factually Unreliable)
+        # Demonstrated factual contradiction takes precedence over source coverage.
         accuracy = available_scores.get("accuracy")
         if accuracy is not None and accuracy < self.settings.factually_unreliable_threshold:
             return "Factually Unreliable"
+
+        groundedness = available_scores.get("groundedness")
+        if groundedness is not None and groundedness < self.settings.critical_hallucination_threshold:
+            return "Unsupported Claims"
 
         return None
 
@@ -268,11 +296,8 @@ class EvaluationCoordinator:
 
     def _calculate_confidence(self, available_scores: dict[str, float], metrics: dict[str, MetricResult]) -> float:
         """Estimate evaluation confidence based on metric availability and source type."""
-        base_confidence = len(available_scores) / len(metrics)
-        # Boost confidence slightly if any metric was evaluated with LLM
-        has_llm = any(m.evaluated_with == "llm" for m in metrics.values())
-        confidence = min(1.0, base_confidence + 0.1) if has_llm else base_confidence
-        return round(confidence, 2)
+        # Backward-compatible field: coverage only, NOT a probability of correctness.
+        return round(len(available_scores) / 4, 2)
 
     async def evaluate_batch(
         self, requests: list[EvaluationRequest]
@@ -285,8 +310,14 @@ class EvaluationCoordinator:
         Returns:
             BatchEvaluationResponse with aggregate metrics and list of individual results.
         """
-        # Run all evaluations concurrently
-        tasks = [self.evaluate(req) for req in requests]
+        # Bound each batch so large uploads do not burst provider rate limits.
+        semaphore = asyncio.Semaphore(3)
+
+        async def evaluate_one(request):
+            async with semaphore:
+                return await self.evaluate(request)
+
+        tasks = [evaluate_one(req) for req in requests]
         results: list[EvaluationResponse] = await asyncio.gather(*tasks)
 
         total_count = len(results)

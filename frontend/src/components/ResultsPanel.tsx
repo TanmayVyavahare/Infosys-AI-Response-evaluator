@@ -1,6 +1,6 @@
 /* Executive AI Quality Audit Report - ResultsPanel */
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { EvaluationResponse } from '../types/evaluation';
 import { ScoreGauge } from './ScoreGauge';
 
@@ -32,12 +32,24 @@ function getVerdictBadge(verdict: string) {
       return { bg: 'bg-red-100 text-red-800 border-red-200', title: 'Factually Unreliable', icon: '❌' };
     case 'Off-Topic':
       return { bg: 'bg-purple-100 text-purple-800 border-purple-200', title: 'Off-Topic Response', icon: '🎯' };
+    case 'Limited Evidence':
+    case 'Conflicting Evidence':
+    case 'Unsupported Claims':
+    case 'Incomplete':
+      return { bg: 'bg-amber-100 text-amber-900 border-amber-300', title: verdict, icon: '!' };
+    case 'Insufficient Data':
+      return { bg: 'bg-slate-100 text-slate-700 border-slate-300', title: 'Insufficient Data', icon: 'ℹ️' };
     default:
       return { bg: 'bg-red-100 text-red-800 border-red-200', title: 'Unacceptable Quality', icon: '🚫' };
   }
 }
 
 export function ResultsPanel({ result }: ResultsPanelProps) {
+  const reportRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    reportRef.current?.scrollIntoView?.({ block: 'start' });
+    reportRef.current?.focus({ preventScroll: true });
+  }, []);
   const [expandedMetrics, setExpandedMetrics] = useState<Record<string, boolean>>({
     relevance: false,
     accuracy: false,
@@ -45,17 +57,20 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
     completeness: false,
   });
   const [jsonExpanded, setJsonExpanded] = useState(false);
+  const [copyError, setCopyError] = useState('');
   const [copySuccess, setCopySuccess] = useState(false);
 
-  const confidencePct = result.confidence != null ? (result.confidence * 100).toFixed(0) : '0';
   const processingTime = result.processing_time_seconds != null ? result.processing_time_seconds.toFixed(2) : '0.00';
-  const timestamp = new Date().toLocaleString();
-  const evaluationId = `EVAL-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+  const [timestamp] = useState(() => new Date().toLocaleString());
+  const [evaluationId] = useState(() => `EVAL-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`);
 
   const strengths = result.strengths ?? [];
   const weaknesses = result.weaknesses ?? [];
   const recommendations = result.recommendations ?? [];
   const metrics = result.metrics ?? {};
+  const scoredCount = Object.values(metrics).filter(metric => metric.score != null).length;
+  const unavailableCount = Object.values(metrics).filter(metric => metric.score == null).length;
+  const limitedAssessment = scoredCount < 4 || ['Limited Evidence', 'Conflicting Evidence'].includes(result.verdict);
 
   const verdictConfig = getVerdictBadge(result.verdict);
 
@@ -70,7 +85,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
   // Check if claims tables have data
   const accuracyClaims = metrics.accuracy?.claims ?? [];
   const groundednessClaims = metrics.groundedness?.claims ?? [];
-  const allClaims = [...accuracyClaims, ...groundednessClaims];
+  const allClaims = [...accuracyClaims.map(claim => ({...claim, check: 'Accuracy'})), ...groundednessClaims.map(claim => ({...claim, check: 'Source support'}))];
   const hasClaimsTable = allClaims.length > 0;
 
   // Check if requirements table has data
@@ -80,7 +95,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
   // Generate One-line evaluation summary
   const getOneLineSummary = () => {
     if (result.verdict === 'Excellent') {
-      return "AI response is outstanding, directly answers the query with high accuracy, and is fully supported by the reference material.";
+      return "The response scored highly on the available checks. Review the evidence and any unavailable metrics before relying on its claims.";
     }
     if (result.verdict === 'Good') {
       return "AI response meets high standards with good accuracy and relevance, showing minimal minor discrepancies.";
@@ -88,30 +103,43 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
     if (result.verdict === 'Acceptable') {
       return "AI response provides basic necessary information, but holds minor omissions or partially covered requirements.";
     }
-    if (result.verdict === 'Critical Hallucination' || result.verdict === 'Factually Unreliable') {
-      return "Critical Warning: The response contains unsupported claims or severe factual hallucinations compared to the source context.";
-    }
-    return `AI response quality evaluation completed. System returned a '${result.verdict}' verdict based on agent heuristics.`;
+    const summaries: Record<string, string> = {
+      'Factually Unreliable': 'The supplied evidence contradicts important claims. Review the incorrect claims below.',
+      'Critical Hallucination': 'Important claims were flagged by the source check. Inspect the evidence before drawing a conclusion.',
+      'Unsupported Claims': 'The supplied source does not support the response. Missing support does not by itself prove a claim false.',
+      'Conflicting Evidence': 'The reference and source disagree. Resolve that conflict before judging this response.',
+      'Limited Evidence': 'This is a partial assessment. The available-check score does not establish that all facts are correct.',
+      'Incomplete': 'The response leaves substantial parts of the request unanswered. See the missing requirements below.',
+      'Off-Topic': 'The response does not address the question.',
+      'Insufficient Data': 'There is not enough information to produce a reliable assessment.',
+    };
+    return summaries[result.verdict] || 'Review the individual findings and recommendations below.';
   };
 
   // Action: Copy Report Text
-  const handleCopyReport = () => {
+  const handleCopyReport = async () => {
+    setCopyError('');
     const reportText = `AI QUALITY AUDIT REPORT\n` +
       `========================\n` +
       `Evaluation ID: ${evaluationId}\n` +
       `Timestamp: ${timestamp}\n` +
-      `Overall Score: ${result.overall_score ? Math.round(result.overall_score * 100) : 'N/A'}/100\n` +
+      `Overall Score: ${result.overall_score != null ? Math.round(result.overall_score * 100) : 'N/A'}/100\n` +
       `Verdict: ${result.verdict}\n` +
-      `Confidence: ${confidencePct}%\n` +
+      `Checks scored: ${scoredCount} of 4 (coverage, not confidence)\n` +
+      `Limitations: ${(result.warnings ?? []).join('; ') || 'See per-check results'}\n` +
       `Processing Time: ${processingTime}s\n` +
       `------------------------\n` +
       `Key Strengths:\n${strengths.map(s => `- ${s}`).join('\n')}\n` +
       `Key Weaknesses:\n${weaknesses.map(w => `- ${w}`).join('\n')}\n` +
       `Improvement Plan:\n${recommendations.map(r => `- ${r}`).join('\n')}`;
 
-    navigator.clipboard.writeText(reportText);
-    setCopySuccess(true);
-    setTimeout(() => setCopySuccess(false), 2000);
+    try {
+      await navigator.clipboard.writeText(reportText);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch {
+      setCopyError('Copy is unavailable in this browser. Use Download JSON or Print report instead.');
+    }
   };
 
   // Action: Download JSON Payload
@@ -131,17 +159,20 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
   };
 
   return (
-    <div className="bg-slate-50 border border-slate-200/80 shadow-lg rounded-2xl p-6 sm:p-8 space-y-10 text-slate-800 print:bg-white print:border-none print:shadow-none print:p-0 animate-fade-in">
+    <div ref={reportRef} tabIndex={-1} aria-label="Response quality report" className="evaluation-report bg-slate-50 border border-slate-200/80 shadow-lg rounded-2xl p-6 sm:p-8 space-y-10 text-slate-800 print:bg-white print:border-none print:shadow-none print:p-0 animate-fade-in">
       
+      {copyError && <p role="alert" className="text-sm text-red-700">{copyError}</p>}
+      {result.warnings?.map(warning => <p key={warning} role="alert" className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-900">{warning}</p>)}
+      {unavailableCount > 0 && <p role="status" className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-900">{unavailableCount} of {Object.keys(metrics).length} checks could not be scored. The overall score includes only available checks. Expand each check below for details.</p>}
       {/* ─── TOOLBAR & ACTION HEADER ─── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-slate-200 pb-5 gap-4 print:hidden">
         <div>
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-0.5">Auditing Suite</span>
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Review complete</span>
           <h2 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
             <svg className="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.03 0 1.9.693 2.166 1.638m-7.377 2.24l-3 3m0 0l3 3m-3-3h15.01" />
             </svg>
-            AI Quality Audit Dashboard
+            Response quality report
           </h2>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
@@ -189,29 +220,30 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
       {/* ─── 1. EXECUTIVE SUMMARY BANNER ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm">
         {/* Left segment: overall circular score gauge */}
-        <div className="lg:col-span-4 col-span-1 flex flex-col items-center justify-center border-b lg:border-b-0 lg:border-r border-slate-100 pb-6 lg:pb-0 lg:pr-8">
+        <div className="order-2 lg:order-1 lg:col-span-4 col-span-1 flex flex-col items-center justify-center border-t lg:border-t-0 lg:border-r border-slate-100 pt-6 lg:pt-0 lg:pr-8">
           <ScoreGauge
             score={result.overall_score ?? null}
+            limited={limitedAssessment}
             size={150}
             strokeWidth={10}
           />
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 block">
-            Overall Quality Score
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-2 block">
+            {limitedAssessment ? 'Available-check score' : 'Overall quality score'}
           </span>
         </div>
 
         {/* Right segment: verdict, summaries, diagnostics */}
-        <div className="lg:col-span-8 col-span-1 space-y-4">
+        <div className="order-1 lg:order-2 lg:col-span-8 col-span-1 space-y-4">
           <div className="flex flex-wrap items-center gap-3">
             <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[11px] font-extrabold uppercase tracking-wider ${verdictConfig.bg}`}>
               <span>{verdictConfig.icon}</span>
               <span>{verdictConfig.title}</span>
             </span>
-            <span className="text-xs text-slate-400 font-medium">Run ID: {evaluationId}</span>
+            <span className="text-xs text-slate-500 font-medium">Run ID: {evaluationId}</span>
           </div>
 
           <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-snug">
-            Executive Summary
+            At a glance
           </h3>
           
           <p className="text-slate-600 text-sm leading-relaxed max-w-2xl font-medium">
@@ -220,15 +252,15 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-4 border-t border-slate-100 mt-2 text-xs">
             <div>
-              <span className="text-slate-400 block mb-0.5">Execution Latency</span>
+              <span className="text-slate-500 block mb-0.5">Review duration</span>
               <strong className="font-semibold text-slate-800">{processingTime} seconds</strong>
             </div>
             <div>
-              <span className="text-slate-400 block mb-0.5">Overall Confidence</span>
-              <strong className="font-semibold text-slate-800">{confidencePct}% rating</strong>
+              <span className="text-slate-500 block mb-0.5">Checks scored</span>
+              <strong className="font-semibold text-slate-800">{scoredCount} of 4</strong>
             </div>
             <div className="col-span-2 sm:col-span-1">
-              <span className="text-slate-400 block mb-0.5">Evaluation Time</span>
+              <span className="text-slate-500 block mb-0.5">Evaluation Time</span>
               <strong className="font-semibold text-slate-800">{timestamp}</strong>
             </div>
           </div>
@@ -237,10 +269,10 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
 
       {/* ─── 2. SCORE SUMMARY CARDS ─── */}
       <div className="space-y-4">
-        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-          Dimension Performance Metrics
+        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+          Your scores
         </h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {Object.entries(metrics).map(([key, metric]) => {
             const colors = getScoreColorClass(metric.score);
             const titles: Record<string, string> = {
@@ -251,7 +283,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
             };
             const summaries: Record<string, string> = {
               relevance: 'Measures alignment to user query topic',
-              accuracy: 'Validates facts against golden reference',
+              accuracy: 'Compares facts with your reference or source',
               groundedness: 'Verifies claims are backed by source context',
               completeness: 'Checks coverage of core instructions',
             };
@@ -265,7 +297,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
                     <h5 className="text-[13px] font-bold text-slate-800 leading-none mb-1">
                       {titles[key] || key}
                     </h5>
-                    <span className="text-[10px] text-slate-400 leading-none">{summaries[key]}</span>
+                    <span className="text-[10px] text-slate-500 leading-none">{summaries[key]}</span>
                   </div>
                   
                   {/* Small circular gauge representation */}
@@ -293,6 +325,11 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
                     {metric.reason}
                   </p>
                 </div>
+                {key === 'accuracy' && metric.evidence_coverage != null && metric.evidence_coverage < 1 && (
+                  <p className="mt-2 text-xs font-semibold text-amber-800">
+                    {Math.round(metric.evidence_coverage * 100)}% of claims could be verified. Accuracy covers only those claims.
+                  </p>
+                )}
               </div>
             );
           })}
@@ -301,8 +338,8 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
 
       {/* ─── 3. DETAILED METRIC REPORTS (EXPANDABLE AUDIT CARDS) ─── */}
       <div className="space-y-4">
-        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-          Granular Auditor Analyses
+        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+          Review details
         </h4>
         <div className="space-y-5">
           {Object.entries(metrics).map(([key, metric]) => {
@@ -310,10 +347,10 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
             const isExpanded = expandedMetrics[key] || false;
             
             const titles: Record<string, string> = {
-              relevance: 'Answer Relevance Auditor',
-              accuracy: 'Factual Accuracy Auditor',
-              groundedness: 'Hallucination Detection Auditor',
-              completeness: 'Completeness Checklist Auditor',
+              relevance: 'Relevance',
+              accuracy: 'Accuracy',
+              groundedness: 'Source support',
+              completeness: 'Completeness',
             };
             const icons: Record<string, string> = {
               relevance: '🎯',
@@ -328,8 +365,9 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
               <div key={key} className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                 {/* Expandable Header */}
                 <button
+                  aria-expanded={isExpanded}
                   onClick={() => toggleMetric(key)}
-                  className="w-full flex items-center justify-between p-6 hover:bg-slate-50 transition cursor-pointer text-left"
+                  className="w-full flex flex-wrap gap-3 items-center justify-between p-4 sm:p-6 hover:bg-slate-50 transition cursor-pointer text-left"
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-xl">{icons[key]}</span>
@@ -337,8 +375,8 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
                       <h5 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight">
                         {titles[key]}
                       </h5>
-                      <span className="text-xs text-slate-400 font-medium">
-                        Evaluated using: {metric.evaluated_with === 'llm' ? '🤖 LLM Agent' : '⚡ Local NLP Heuristics'}
+                      <span className="text-xs text-slate-500 font-medium">
+                        {metric.score == null ? 'Not scored' : metric.evaluated_with === 'error' ? 'Check unavailable' : metric.evaluated_with === 'llm' ? 'AI review' : 'Local review'}
                       </span>
                     </div>
                   </div>
@@ -347,7 +385,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
                       Score: {displayScore !== null ? `${displayScore}/100` : 'N/A'}
                     </span>
                     <svg
-                      className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                      className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
                       fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
@@ -359,7 +397,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
                 {isExpanded && (
                   <div className="border-t border-slate-100 p-6 space-y-6 bg-slate-50/20">
                     <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Auditor Findings</span>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Auditor Findings</span>
                       <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-medium bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
                         {metric.reason}
                       </p>
@@ -368,7 +406,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
                     {/* Evidence Used Panel */}
                     {metric.evidence && metric.evidence.length > 0 && (
                       <div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Evidence Used</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Evidence Used</span>
                         <div className="bg-slate-900 border border-slate-950 rounded-xl p-4 font-mono-code text-[11px] text-slate-300 space-y-2.5 overflow-x-auto max-h-[220px] overflow-y-auto">
                           {metric.evidence.map((snippet, idx) => (
                             <div key={idx} className="pb-2.5 border-b border-slate-800 last:border-b-0 last:pb-0 whitespace-pre-line leading-relaxed">
@@ -396,7 +434,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
                             ))}
                           </ul>
                         ) : (
-                          <p className="text-xs text-slate-400 italic">No specific strengths highlighted.</p>
+                          <p className="text-xs text-slate-500 italic">No specific strengths highlighted.</p>
                         )}
                       </div>
 
@@ -415,7 +453,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
                             ))}
                           </ul>
                         ) : (
-                          <p className="text-xs text-slate-400 italic">No critical weaknesses identified.</p>
+                          <p className="text-xs text-slate-500 italic">No critical weaknesses identified.</p>
                         )}
                       </div>
 
@@ -434,7 +472,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
                             ))}
                           </ul>
                         ) : (
-                          <p className="text-xs text-slate-400 italic">No recommendations needed.</p>
+                          <p className="text-xs text-slate-500 italic">No recommendations needed.</p>
                         )}
                       </div>
                     </div>
@@ -449,8 +487,8 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
       {/* ─── 4. CLAIM VERIFICATION TABLE (CONDITIONAL) ─── */}
       {hasClaimsTable && (
         <div className="space-y-4">
-          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-            Atomic Claims Verification Audit
+          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+            Claims and evidence
           </h4>
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
@@ -459,14 +497,15 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
                   <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
                     <th className="py-3.5 px-5">Extracted Statement / Claim</th>
                     <th className="py-3.5 px-5 w-[140px]">Status</th>
-                    <th className="py-3.5 px-5 w-[100px] text-center">Confidence</th>
-                    <th className="py-3.5 px-5">Source Citation / Evidence Reference</th>
+                    <th className="py-3.5 px-5">Check</th>
+                    <th className="py-3.5 px-5">Evidence</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700">
                   {allClaims.map((claim, idx) => {
-                    const isSupported = claim.supported;
-                    const confidenceVal = claim.score != null ? Math.round(claim.score * 100) : (isSupported ? 100 : 0);
+                    const isSupported = claim.supported === true;
+                    const unknown = claim.supported == null;
+                    const status = claim.verdict ? ({ CORRECT: 'Correct', INCORRECT: 'Incorrect', UNVERIFIABLE: 'Unverifiable', CONFLICTING: 'Conflicting evidence', SUPPORTED: 'Supported', UNSUPPORTED: 'Unsupported', CONTRADICTED: 'Contradicted' }[claim.verdict]) : isSupported ? 'Supported' : unknown ? 'Unverifiable' : 'Unsupported';
                     return (
                       <tr key={idx} className="hover:bg-slate-50/50 transition font-medium">
                         <td className="py-4 px-5 max-w-sm whitespace-pre-wrap leading-relaxed">
@@ -475,16 +514,16 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
                         <td className="py-4 px-5">
                           {isSupported ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                              ● Supported
+                              {status}
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-100 text-rose-800 border border-rose-200">
-                              ▲ Unsupported
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${unknown || claim.verdict === 'UNSUPPORTED' ? 'bg-amber-100 text-amber-900 border-amber-200' : 'bg-rose-100 text-rose-800 border-rose-200'}`}>
+                              {status}
                             </span>
                           )}
                         </td>
                         <td className="py-4 px-5 text-center font-mono-code">
-                          {confidenceVal}%
+                          {claim.check}
                         </td>
                         <td className="py-4 px-5 text-slate-500 max-w-md whitespace-pre-wrap leading-relaxed">
                           {claim.evidence || 'No supporting context evidence found.'}
@@ -502,8 +541,8 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
       {/* ─── 5. REQUIREMENT COVERAGE TABLE (CONDITIONAL) ─── */}
       {hasRequirementsTable && (
         <div className="space-y-4">
-          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-            Prompt Instructions Coverage Report
+          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+            What the answer covers
           </h4>
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
@@ -558,7 +597,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h4 className="text-sm font-bold uppercase tracking-wider text-emerald-700">Audit Strengths</h4>
+              <h4 className="text-sm font-bold uppercase tracking-wider text-emerald-700">What works well</h4>
             </div>
             {strengths.length > 0 ? (
               <ul className="space-y-3">
@@ -570,7 +609,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
                 ))}
               </ul>
             ) : (
-              <p className="text-xs text-slate-400 italic">No specific strengths listed.</p>
+              <p className="text-xs text-slate-500 italic">No specific strengths listed.</p>
             )}
           </div>
         </div>
@@ -583,7 +622,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                 </svg>
               </div>
-              <h4 className="text-sm font-bold uppercase tracking-wider text-rose-700">Audit Weaknesses</h4>
+              <h4 className="text-sm font-bold uppercase tracking-wider text-rose-700">What needs attention</h4>
             </div>
             {weaknesses.length > 0 ? (
               <ul className="space-y-3">
@@ -595,7 +634,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
                 ))}
               </ul>
             ) : (
-              <p className="text-xs text-slate-400 italic font-medium">No critical weaknesses identified.</p>
+              <p className="text-xs text-slate-500 italic font-medium">No critical weaknesses identified.</p>
             )}
           </div>
         </div>
@@ -609,7 +648,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
             </svg>
           </div>
-          <h4 className="text-sm font-bold uppercase tracking-wider text-indigo-800">Improvement Plan & Action Items</h4>
+          <h4 className="text-sm font-bold uppercase tracking-wider text-indigo-800">Suggested improvements</h4>
         </div>
         {recommendations.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -623,219 +662,31 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
             ))}
           </div>
         ) : (
-          <p className="text-xs text-slate-400 italic">No recommendations provided.</p>
+          <p className="text-xs text-slate-500 italic">No recommendations provided.</p>
         )}
       </div>
 
-      {/* ─── 8. PROCESS FLOW PIPELINE DIAGRAM ─── */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm">
-        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">
-          Aegis Evaluation Pipeline Architecture
-        </h4>
-        <div className="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-5 text-[11px] font-bold text-slate-700 relative">
-          
-          <div className="flex flex-col items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl p-3 w-[120px] text-center shadow-sm">
-            <span className="text-lg">❓</span>
-            <span>Question Ingestion</span>
-          </div>
-
-          <svg className="w-4 h-4 text-slate-300 rotate-90 md:rotate-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-          </svg>
-
-          <div className="flex flex-col items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl p-3 w-[120px] text-center shadow-sm relative">
-            <span className="text-lg">📚</span>
-            <span>RAG Context</span>
-            {!hasRetrieval && (
-              <span className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-md bg-slate-200 text-slate-500 text-[8px] font-black tracking-wide border border-slate-300">
-                BYPASSED
-              </span>
-            )}
-          </div>
-
-          <svg className="w-4 h-4 text-slate-300 rotate-90 md:rotate-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-          </svg>
-
-          <div className="flex flex-col items-center gap-1 bg-indigo-50 border border-indigo-100 text-indigo-800 rounded-xl p-3 w-[125px] text-center shadow-sm">
-            <span className="text-lg">📦</span>
-            <span>Eval Package</span>
-          </div>
-
-          <svg className="w-4 h-4 text-slate-300 rotate-90 md:rotate-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-          </svg>
-
-          {/* Parallel execution box */}
-          <div className="border border-slate-200 bg-slate-50/50 rounded-xl p-2.5 flex flex-col gap-1.5 shadow-sm">
-            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider text-center">4 Concurrent Judges</span>
-            <div className="flex flex-wrap gap-1.5 justify-center">
-              <span className="px-2 py-1 rounded bg-white border border-slate-200 text-[9px] font-black">🎯 Relevance</span>
-              <span className="px-2 py-1 rounded bg-white border border-slate-200 text-[9px] font-black">✅ Accuracy</span>
-              <span className="px-2 py-1 rounded bg-white border border-slate-200 text-[9px] font-black">🔍 Grounded</span>
-              <span className="px-2 py-1 rounded bg-white border border-slate-200 text-[9px] font-black">📋 Complete</span>
-            </div>
-          </div>
-
-          <svg className="w-4 h-4 text-slate-300 rotate-90 md:rotate-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-          </svg>
-
-          <div className="flex flex-col items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl p-3 w-[120px] text-center shadow-sm">
-            <span className="text-lg">⚙️</span>
-            <span>Verdict Synthesizer</span>
-          </div>
-
-          <svg className="w-4 h-4 text-slate-300 rotate-90 md:rotate-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-          </svg>
-
-          <div className="flex flex-col items-center gap-1 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-xl p-3 w-[120px] text-center shadow-sm">
-            <span className="text-lg">📁</span>
-            <span>Quality Audit</span>
-          </div>
-        </div>
-      </div>
-
-      {/* ─── 9. RETRIEVAL INFORMATION (CONDITIONAL) ─── */}
-      {hasRetrieval && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center">
-              <svg className="w-4 h-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.637 10.637z" />
-              </svg>
-            </div>
-            <h4 className="text-sm font-bold uppercase tracking-wider text-slate-800">
-              Context Retrieval Diagnostic Data
-            </h4>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-5 text-xs border-b border-slate-100 pb-5">
-            <div>
-              <span className="text-slate-400 block mb-0.5">Embedding Model</span>
-              <strong className="font-semibold text-slate-800">all-MiniLM-L6-v2</strong>
-            </div>
-            <div>
-              <span className="text-slate-400 block mb-0.5">Vector Database</span>
-              <strong className="font-semibold text-slate-800">Local FAISS Index</strong>
-            </div>
-            <div>
-              <span className="text-slate-400 block mb-0.5">Knowledge Base</span>
-              <strong className="font-semibold text-slate-800">Uploaded Document Context</strong>
-            </div>
-            <div>
-              <span className="text-slate-400 block mb-0.5">Retrieved Chunks</span>
-              <strong className="font-semibold text-slate-800">{retrievalEvidence.length} Context Blocks</strong>
-            </div>
-          </div>
-
-          {/* Snippets list */}
-          <div className="space-y-3">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Retrieved Context Chunks</span>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {retrievalEvidence.map((text, idx) => (
-                <div key={idx} className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex flex-col justify-between gap-3 shadow-sm hover:shadow transition-shadow">
-                  <div>
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wide block mb-1">Chunk #{idx + 1}</span>
-                    <p className="text-[11px] text-slate-600 leading-relaxed font-medium line-clamp-4">
-                      "{text}"
-                    </p>
-                  </div>
-                  <div className="border-t border-slate-200/50 pt-2 flex justify-between items-center text-[10px] font-semibold text-slate-400">
-                    <span>Source: president_history.txt</span>
-                    <span className="text-primary-600 bg-primary-50 px-2 py-0.5 rounded-md">Sim: 0.89</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─── 10. EVALUATION TIMELINE ─── */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm">
-        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">
-          Diagnostic Audit Execution Timeline
-        </h4>
-        <div className="space-y-4">
-          {/* Diagnostic Stats Header */}
-          <div className="flex justify-between items-center text-xs border-b border-slate-100 pb-3">
-            <span className="text-slate-500 font-medium">Evaluation Stages Execution Span</span>
-            <span className="font-mono-code text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-md font-bold">Total Duration: {processingTime}s</span>
-          </div>
-
-          {/* Vertical Gantt list */}
-          <div className="space-y-3 text-xs">
-            {/* Stage 1: Ingestion */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50/50 rounded-xl p-3 border border-slate-100 font-medium">
-              <div className="flex items-center gap-2">
-                <span className="text-emerald-500">●</span>
-                <span className="font-bold">Input Ingestion & Setup</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-[11px] text-slate-400 font-mono-code">0.0s to 0.08s</span>
-                <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-black">COMPLETED</span>
-              </div>
-            </div>
-
-            {/* Stage 2: Retrieval */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50/50 rounded-xl p-3 border border-slate-100 font-medium">
-              <div className="flex items-center gap-2">
-                <span className={hasRetrieval ? "text-emerald-500" : "text-slate-400"}>●</span>
-                <span className="font-bold">Vector Similarity Search (RAG)</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-[11px] text-slate-400 font-mono-code">{hasRetrieval ? "0.08s to 0.42s" : "0.0s"}</span>
-                {hasRetrieval ? (
-                  <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-black">COMPLETED</span>
-                ) : (
-                  <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-500 text-[10px] font-black">BYPASSED</span>
-                )}
-              </div>
-            </div>
-
-            {/* Stage 3: Concurrent Judges */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50/50 rounded-xl p-3 border border-slate-100 font-medium">
-              <div className="flex items-center gap-2">
-                <span className="text-emerald-500">●</span>
-                <span className="font-bold">Concurrent Auditor Agent Analysis (Relevance, Accuracy, Groundedness, Completeness)</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-[11px] text-slate-400 font-mono-code">0.42s to {(parseFloat(processingTime) - 0.05).toFixed(2)}s</span>
-                <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-black">COMPLETED (CONCURRENT)</span>
-              </div>
-            </div>
-
-            {/* Stage 4: Verdict */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50/50 rounded-xl p-3 border border-slate-100 font-medium">
-              <div className="flex items-center gap-2">
-                <span className="text-emerald-500">●</span>
-                <span className="font-bold">Verdict Consolidation & Weight Analysis</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-[11px] text-slate-400 font-mono-code">{(parseFloat(processingTime) - 0.05).toFixed(2)}s to {processingTime}s</span>
-                <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-black">COMPLETED</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      {hasRetrieval && <details className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
+        <summary className="cursor-pointer font-semibold text-slate-800">Supporting evidence</summary>
+        <p className="text-sm text-slate-600">Evidence cited by the source support check.</p>
+        {retrievalEvidence.map((text, index) => <blockquote key={index} className="border-l-2 border-indigo-300 pl-4 text-sm text-slate-700 leading-relaxed">{text}</blockquote>)}
+      </details>}
 
       {/* ─── 11. COLLAPSIBLE RAW JSON PAYLOAD ─── */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
         <button
+          aria-expanded={jsonExpanded}
           onClick={() => setJsonExpanded(!jsonExpanded)}
           className="w-full flex items-center justify-between p-6 hover:bg-slate-50 transition cursor-pointer text-left"
         >
           <div className="flex items-center gap-2.5">
             <span className="text-lg">⚙️</span>
             <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
-              Raw Audit Response payload (JSON)
+              Full report data (JSON)
             </h4>
           </div>
           <svg
-            className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${jsonExpanded ? 'rotate-180' : ''}`}
+            className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${jsonExpanded ? 'rotate-180' : ''}`}
             fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />

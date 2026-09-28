@@ -40,8 +40,6 @@
 /* ── Global Styles ────────────────────────────────────── */
 
 * {
-  margin: 0;
-  padding: 0;
   box-sizing: border-box;
 }
 
@@ -656,7 +654,7 @@ body::after {
 }
 
 .input-field::placeholder {
-  color: #475569;
+  color: #94a3b8;
 }
 
 .input-field:focus {
@@ -802,4 +800,35 @@ body::after {
 ::selection {
   background: rgba(99, 102, 241, 0.3);
   color: #f8fafc;
+}
+
+/* Comfortable reading, keyboard navigation, and small screens. */
+.supporting-details { border-top: 1px solid #334155; padding-top: 1rem; }
+.supporting-details summary { cursor: pointer; color: #c7d2fe; font-weight: 600; font-size: .9rem; }
+.supporting-details > .space-y-2 { margin-top: 1rem; }
+.help-dialog { margin: auto; padding: 1rem; border: 0; background: transparent; width: min(100%, 44rem); max-height: 90dvh; color: #f1f5f9; }
+.help-dialog::backdrop { background: #020617cc; backdrop-filter: blur(6px); }
+.glass-card:hover { transform: none; }
+button:disabled { cursor: not-allowed; }
+.mode-switch-button:disabled { opacity: .5; }
+.text-surface-500 { color: #94a3b8; }
+form label { font-size: .8125rem !important; font-weight: 600 !important; letter-spacing: normal !important; }
+.evaluation-report { overflow-wrap: anywhere; scroll-margin-top: 6rem; }
+@media (max-width: 640px) {
+  .brand-badge { display: none; }
+  .input-field { font-size: 1rem; }
+  .workspace-heading h2 { font-size: 1.5rem; }
+  .evaluation-report { padding: 1rem; }
+  .mode-switch-button { align-items: center; min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media print {
+  body { background: white; }
+  body::before, body::after { display: none; }
+  body * { visibility: hidden; }
+  .evaluation-report, .evaluation-report * { visibility: visible; }
+  .evaluation-report { position: absolute; inset: 0; width: 100%; border: 0; box-shadow: none; }
+  .evaluation-report .print\:hidden { display: none !important; }
 }

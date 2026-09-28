@@ -7,6 +7,7 @@ The factory selects the active provider based on configuration.
 from __future__ import annotations
 
 import asyncio
+import re
 from abc import ABC, abstractmethod
 from typing import Optional
 
@@ -252,7 +253,9 @@ class GroqProvider(LLMProvider):
             from openai import AsyncOpenAI
             self._client = AsyncOpenAI(
                 api_key=self._api_key,
-                base_url="https://api.groq.com/openai/v1"
+                base_url="https://api.groq.com/openai/v1",
+                timeout=get_settings().llm_timeout,
+                max_retries=0,
             )
         return self._client
 
@@ -274,19 +277,47 @@ class GroqProvider(LLMProvider):
                 messages.append({"role": "system", "content": system_message})
             messages.append({"role": "user", "content": prompt})
 
-            response = await client.chat.completions.create(
-                model=self._model,
-                messages=messages,
-                temperature=temp,
-                max_tokens=tokens,
-            )
-            return response.choices[0].message.content
+            # Respect short provider throttles rather than immediately downgrading
+            # the review to local heuristics. Retries are bounded by time and count.
+            deadline = asyncio.get_running_loop().time() + 120
+            for attempt in range(8):
+                try:
+                    response = await client.chat.completions.create(
+                        model=self._model, messages=messages,
+                        temperature=temp, max_tokens=tokens,
+                    )
+                    return response.choices[0].message.content
+                except Exception as exc:
+                    if getattr(exc, "status_code", None) != 429 or attempt == 7:
+                        raise
+                    delay = self._retry_delay(exc, attempt)
+                    if asyncio.get_running_loop().time() + delay > deadline:
+                        raise
+                    logger.info("Groq rate limit: retrying after %.1f seconds", delay)
+                    await asyncio.sleep(delay)
 
         except Exception as exc:
-            raise LLMProviderError(
-                f"Groq API call failed: {exc}",
-                detail=str(exc),
-            ) from exc
+            status = getattr(exc, "status_code", None)
+            daily_limit = status == 429 and ("tokens per day" in str(exc).lower() or "(tpd)" in str(exc).lower())
+            message = (
+                "Groq's daily token limit has been reached. Try again when quota is available." if daily_limit else
+                "Groq is temporarily rate-limited. Please retry shortly." if status == 429 else
+                "Groq review is unavailable. Check the provider configuration or try again."
+            )
+            raise LLMProviderError(message) from exc
+
+    @staticmethod
+    def _retry_delay(exc: Exception, attempt: int) -> float:
+        headers = getattr(getattr(exc, "response", None), "headers", {})
+        try:
+            delay = float(headers.get("retry-after", ""))
+        except (ValueError, TypeError):
+            match = re.search(r"try again in ([0-9.hms ]+)", str(exc), re.I)
+            durations = re.findall(r"([0-9]+(?:\.[0-9]+)?)\s*([hms])", match.group(1).lower()) if match else []
+            delay = sum(float(value) * {'h':3600, 'm':60, 's':1}[unit] for value, unit in durations) if durations else 5 * (attempt + 1)
+        # Do not shorten a long provider wait and hammer its exhausted quota.
+        # generate() rejects delays beyond its remaining two-minute retry budget.
+        return max(1.0, delay + 1.0)
 
     @property
     def provider_name(self) -> str:

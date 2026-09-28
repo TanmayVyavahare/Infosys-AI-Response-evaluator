@@ -2,6 +2,7 @@
 
 export interface ClaimDetail {
   claim: string;
+  verdict?: 'CORRECT' | 'INCORRECT' | 'UNVERIFIABLE' | 'CONFLICTING' | 'SUPPORTED' | 'UNSUPPORTED' | 'CONTRADICTED' | null;
   supported: boolean | null;
   score: number | null;
   evidence: string | null;
@@ -15,6 +16,7 @@ export interface RequirementCoverage {
 
 export interface MetricResult {
   metric_name: string;
+  evidence_coverage?: number | null;
   score: number | null;
   reason: string;
   evidence: string[];
@@ -27,6 +29,7 @@ export interface MetricResult {
 }
 
 export interface EvaluationResponse {
+  warnings?: string[];
   metrics: Record<string, MetricResult>;
   overall_score: number | null;
   verdict: string;

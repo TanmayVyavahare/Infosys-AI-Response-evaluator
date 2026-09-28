@@ -20,9 +20,9 @@ WHAT NOT TO EVALUATE:
 
 PROCESS:
 1. Extract ALL requirements from the question (sub-questions, topics, requested formats).
-2. If a reference answer is provided, use it to ENRICH the requirement list only — do NOT replace the question.
+2. Use the reference only to interpret explicitly requested requirements. Never add requirements merely because the reference contains extra facts. Use source context to determine whether a source-only question is answerable.
 3. For each requirement, check if the response covers it: COVERED, PARTIAL, or MISSING.
-4. Calculate coverage score.
+4. Split independently requested items into separate requirements (price, project limit, support and trial = four). Calculate score = (COVERED count + 0.5 * PARTIAL count) / requirement count. Answering one of four is 0.25, never 0.8. A justified abstention can fully address an unanswerable source-only question; a bare refusal of an answerable question does not cover it.
 
 SCORING RUBRIC (0.0 to 1.0):
 - 1.0: All requirements fully covered
@@ -32,6 +32,13 @@ SCORING RUBRIC (0.0 to 1.0):
 - 0.2: Most requirements missing
 - 0.0: No requirements addressed
 
+BOUNDARY EXAMPLES:
+- If asked for a launch year and the answer supplies a year, the year requirement is COVERED even if the year is false or not verifiable. Accuracy and source support handle that separately.
+- If asked for a price and the answer states the wrong price, completeness is still 1.0. Do not add an 'accurate price' requirement that duplicates fact checking.
+- If a source-only question cannot be answered from the supplied material, an explicit explanation of that absence can be COVERED. This does not mean a bare refusal covers an answerable question.
+- Extra reference details that were not requested do not become requirements.
+Before returning, check that no requirement is marked missing solely because its stated answer is unsupported or incorrect.
+
 You MUST respond with ONLY a valid JSON object. No other text."""
 
 
@@ -39,6 +46,7 @@ def build_completeness_prompt(
     question: str,
     ai_response: str,
     reference_answer: str | None = None,
+    context: str | None = None,
 ) -> str:
     """Build the completeness evaluation prompt.
 
@@ -53,9 +61,11 @@ def build_completeness_prompt(
     ref_section = ""
     if reference_answer:
         ref_section = f"""
-REFERENCE ANSWER (for enrichment only — do NOT replace the question requirements):
+REFERENCE ANSWER (interpret explicitly requested requirements only; do NOT add requirements):
 {reference_answer}
 """
+    if context:
+        ref_section += f"\nSOURCE CONTEXT (check answerability; do NOT add requirements):\n{context}\n"
 
     return f"""Assess the COMPLETENESS of the following AI response.
 

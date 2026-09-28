@@ -1,0 +1,846 @@
+[
+  {
+    "case": {
+      "id": "correct",
+      "question": "What does Orion cost and how many projects are included?",
+      "ai_response": "Orion costs 20 credits a month and includes 5 projects.",
+      "reference_answer": "20 credits monthly; 5 projects.",
+      "source_document": "The Orion plan costs 20 credits per month. It includes 5 projects and email support. It does not include phone support. The trial lasts 14 days.",
+      "expected": "High scores on all four checks."
+    },
+    "report": {
+      "metrics": {
+        "relevance": {
+          "metric_name": "relevance",
+          "score": 1.0,
+          "evidence_coverage": null,
+          "reason": "The response directly answers both parts of the question—cost and number of projects—without any off‑topic content.",
+          "evidence": [
+            "\"Orion costs 20 credits a month\"",
+            "\"includes 5 projects\""
+          ],
+          "strengths": [
+            "Provides the requested cost and project count in a concise manner."
+          ],
+          "weaknesses": [],
+          "suggestions": [],
+          "claims": [],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "accuracy": {
+          "metric_name": "accuracy",
+          "score": 1.0,
+          "evidence_coverage": 1.0,
+          "reason": "Both factual claims made by the AI response are directly supported by the reference answer and the source context.",
+          "evidence": [
+            "\"The Orion plan costs 20 credits per month.\"",
+            "\"It includes 5 projects.\""
+          ],
+          "strengths": [
+            "Accurately states Orion cost as 20 credits per month",
+            "Accurately states Orion includes 5 projects"
+          ],
+          "weaknesses": [],
+          "suggestions": [],
+          "claims": [
+            {
+              "claim": "Orion costs 20 credits a month.",
+              "verdict": "CORRECT",
+              "supported": true,
+              "score": null,
+              "evidence": "\"The Orion plan costs 20 credits per month.\""
+            },
+            {
+              "claim": "Orion includes 5 projects.",
+              "verdict": "CORRECT",
+              "supported": true,
+              "score": null,
+              "evidence": "\"It includes 5 projects.\""
+            }
+          ],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "groundedness": {
+          "metric_name": "groundedness",
+          "score": 1.0,
+          "evidence_coverage": null,
+          "reason": "All factual claims in the AI response are directly supported by the provided context.",
+          "evidence": [
+            "The Orion plan costs 20 credits per month. It includes 5 projects and email support."
+          ],
+          "strengths": [
+            "Orion costs 20 credits a month",
+            "Orion includes 5 projects"
+          ],
+          "weaknesses": [],
+          "suggestions": [],
+          "claims": [
+            {
+              "claim": "Orion costs 20 credits a month",
+              "verdict": "SUPPORTED",
+              "supported": true,
+              "score": null,
+              "evidence": "The Orion plan costs 20 credits per month. It includes 5 projects and email support."
+            },
+            {
+              "claim": "Orion includes 5 projects",
+              "verdict": "SUPPORTED",
+              "supported": true,
+              "score": null,
+              "evidence": "The Orion plan costs 20 credits per month. It includes 5 projects and email support."
+            }
+          ],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "completeness": {
+          "metric_name": "completeness",
+          "score": 1.0,
+          "evidence_coverage": null,
+          "reason": "The AI response fully addresses both requested aspects: the cost of Orion and the number of projects included. Both requirements are explicitly answered with the correct values.",
+          "evidence": [
+            "\"Orion costs 20 credits a month\"",
+            "\"includes 5 projects\""
+          ],
+          "strengths": [
+            "Accurately states the monthly cost.",
+            "Accurately states the number of projects."
+          ],
+          "weaknesses": [],
+          "suggestions": [],
+          "claims": [],
+          "requirements": [
+            {
+              "requirement": "What does Orion cost?",
+              "status": "covered",
+              "evidence": "\"Orion costs 20 credits a month\""
+            },
+            {
+              "requirement": "How many projects are included?",
+              "status": "covered",
+              "evidence": "\"includes 5 projects\""
+            }
+          ],
+          "evaluated_with": "llm"
+        }
+      },
+      "warnings": [],
+      "overall_score": 1.0,
+      "verdict": "Excellent",
+      "confidence": 1.0,
+      "processing_time_seconds": 2.66,
+      "strengths": [
+        "Provides the requested cost and project count in a concise manner.",
+        "Accurately states Orion cost as 20 credits per month",
+        "Accurately states Orion includes 5 projects",
+        "Orion costs 20 credits a month",
+        "Orion includes 5 projects",
+        "Accurately states the monthly cost.",
+        "Accurately states the number of projects."
+      ],
+      "weaknesses": [],
+      "recommendations": []
+    }
+  },
+  {
+    "case": {
+      "id": "wrong_numbers",
+      "question": "What does Orion cost and how many projects are included?",
+      "ai_response": "Orion costs 200 credits per month and includes 50 projects.",
+      "reference_answer": "20 credits monthly; 5 projects.",
+      "source_document": "The Orion plan costs 20 credits per month. It includes 5 projects and email support. It does not include phone support. The trial lasts 14 days.",
+      "expected": "Relevant and complete, but inaccurate and contradicted; low overall score."
+    },
+    "report": {
+      "metrics": {
+        "relevance": {
+          "metric_name": "relevance",
+          "score": 1.0,
+          "evidence_coverage": null,
+          "reason": "The response directly answers both parts of the question—cost and number of projects—without any off‑topic content.",
+          "evidence": [
+            "\"Orion costs 200 credits per month\"",
+            "\"includes 50 projects\""
+          ],
+          "strengths": [
+            "Provides the requested cost and project count in a concise manner."
+          ],
+          "weaknesses": [],
+          "suggestions": [],
+          "claims": [],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "accuracy": {
+          "metric_name": "accuracy",
+          "score": 0.0,
+          "evidence_coverage": 1.0,
+          "reason": "Both factual claims in the AI response contradict the reference answer and the source context.",
+          "evidence": [
+            "Reference answer states Orion costs 20 credits monthly and includes 5 projects.",
+            "Source context confirms Orion plan costs 20 credits per month and includes 5 projects."
+          ],
+          "strengths": [],
+          "weaknesses": [
+            "AI claims Orion costs 200 credits per month, which is ten times higher than the correct 20 credits.",
+            "AI claims Orion includes 50 projects, which is ten times higher than the correct 5 projects."
+          ],
+          "suggestions": [
+            "Use the correct figures: 20 credits per month and 5 projects.",
+            "Verify all numeric claims against authoritative sources before responding."
+          ],
+          "claims": [
+            {
+              "claim": "Orion costs 200 credits per month",
+              "verdict": "INCORRECT",
+              "supported": false,
+              "score": null,
+              "evidence": "Reference answer and source context both state the cost is 20 credits per month."
+            },
+            {
+              "claim": "Orion includes 50 projects",
+              "verdict": "INCORRECT",
+              "supported": false,
+              "score": null,
+              "evidence": "Reference answer and source context both state the plan includes 5 projects."
+            }
+          ],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "groundedness": {
+          "metric_name": "groundedness",
+          "score": 0.0,
+          "evidence_coverage": null,
+          "reason": "Both factual claims in the AI response contradict the provided context.",
+          "evidence": [
+            "\"The Orion plan costs 20 credits per month.\"",
+            "\"It includes 5 projects\""
+          ],
+          "strengths": [],
+          "weaknesses": [
+            "Orion costs 200 credits per month",
+            "Orion includes 50 projects"
+          ],
+          "suggestions": [
+            "Verify numeric values against the source text before making claims.",
+            "Cross‑check each claim with the context to avoid fabricating details.",
+            "Use exact wording from the source when possible to ensure alignment."
+          ],
+          "claims": [
+            {
+              "claim": "Orion costs 200 credits per month",
+              "verdict": "CONTRADICTED",
+              "supported": false,
+              "score": null,
+              "evidence": "\"The Orion plan costs 20 credits per month.\""
+            },
+            {
+              "claim": "Orion includes 50 projects",
+              "verdict": "CONTRADICTED",
+              "supported": false,
+              "score": null,
+              "evidence": "\"It includes 5 projects\""
+            }
+          ],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "completeness": {
+          "metric_name": "completeness",
+          "score": 1.0,
+          "evidence_coverage": null,
+          "reason": "The AI response addresses both requested aspects of the question—cost and number of projects—by providing explicit values for each. Although the values differ from the reference answer, completeness is judged solely on whether the response covers the requested information, not on factual accuracy.",
+          "evidence": [
+            "Cost: \"Orion costs 200 credits per month\"",
+            "Projects: \"includes 50 projects\""
+          ],
+          "strengths": [
+            "Both cost and project count are explicitly stated."
+          ],
+          "weaknesses": [],
+          "suggestions": [],
+          "claims": [],
+          "requirements": [
+            {
+              "requirement": "Cost of Orion",
+              "status": "covered",
+              "evidence": "\"Orion costs 200 credits per month\""
+            },
+            {
+              "requirement": "Number of projects included",
+              "status": "covered",
+              "evidence": "\"includes 50 projects\""
+            }
+          ],
+          "evaluated_with": "llm"
+        }
+      },
+      "warnings": [],
+      "overall_score": 0.225,
+      "verdict": "Factually Unreliable",
+      "confidence": 1.0,
+      "processing_time_seconds": 18.384,
+      "strengths": [
+        "Provides the requested cost and project count in a concise manner.",
+        "Both cost and project count are explicitly stated."
+      ],
+      "weaknesses": [
+        "AI claims Orion costs 200 credits per month, which is ten times higher than the correct 20 credits.",
+        "AI claims Orion includes 50 projects, which is ten times higher than the correct 5 projects.",
+        "Orion costs 200 credits per month",
+        "Orion includes 50 projects"
+      ],
+      "recommendations": [
+        "Use the correct figures: 20 credits per month and 5 projects.",
+        "Verify all numeric claims against authoritative sources before responding.",
+        "Verify numeric values against the source text before making claims.",
+        "Cross‑check each claim with the context to avoid fabricating details."
+      ]
+    }
+  },
+  {
+    "case": {
+      "id": "incomplete",
+      "question": "Give the monthly price, project limit, support channel, and trial length for Orion.",
+      "ai_response": "Orion costs 20 credits per month.",
+      "reference_answer": "20 credits per month, 5 projects, email support, 14-day trial.",
+      "source_document": "The Orion plan costs 20 credits per month. It includes 5 projects and email support. It does not include phone support. The trial lasts 14 days.",
+      "expected": "Correct stated fact, but only one of four requirements covered; must not be Good or Excellent."
+    },
+    "report": {
+      "metrics": {
+        "relevance": {
+          "metric_name": "relevance",
+          "score": 1.0,
+          "evidence_coverage": null,
+          "reason": "The response directly addresses the requested monthly price, staying on topic and covering the requested subject matter, even though it omits the other requested details.",
+          "evidence": [
+            "\"Orion costs 20 credits per month.\""
+          ],
+          "strengths": [
+            "Provides the monthly price as requested."
+          ],
+          "weaknesses": [
+            "Does not provide project limit, support channel, or trial length."
+          ],
+          "suggestions": [
+            "Include the missing project limit, support channel, and trial length to fully satisfy the question."
+          ],
+          "claims": [],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "accuracy": {
+          "metric_name": "accuracy",
+          "score": 1.0,
+          "evidence_coverage": 1.0,
+          "reason": "The AI response contains a single factual claim that matches the reference answer and source context. No contradictory or incorrect information is present.",
+          "evidence": [
+            "\"Orion costs 20 credits per month.\" matches the reference answer and source context."
+          ],
+          "strengths": [
+            "Accurately states Orion's monthly price."
+          ],
+          "weaknesses": [],
+          "suggestions": [],
+          "claims": [
+            {
+              "claim": "Orion costs 20 credits per month.",
+              "verdict": "CORRECT",
+              "supported": true,
+              "score": null,
+              "evidence": "Both the reference answer and the source context state that Orion costs 20 credits per month."
+            }
+          ],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "groundedness": {
+          "metric_name": "groundedness",
+          "score": 1.0,
+          "evidence_coverage": null,
+          "reason": "The AI response contains a single factual claim that is directly supported by the provided context. No unsupported or contradictory claims are present.",
+          "evidence": [
+            "\"The Orion plan costs 20 credits per month.\""
+          ],
+          "strengths": [
+            "The claim that Orion costs 20 credits per month is directly supported by the context."
+          ],
+          "weaknesses": [],
+          "suggestions": [],
+          "claims": [
+            {
+              "claim": "Orion costs 20 credits per month.",
+              "verdict": "SUPPORTED",
+              "supported": true,
+              "score": null,
+              "evidence": "\"The Orion plan costs 20 credits per month.\""
+            }
+          ],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "completeness": {
+          "metric_name": "completeness",
+          "score": 0.25,
+          "evidence_coverage": null,
+          "reason": "The AI response only addresses the monthly price requirement and omits the project limit, support channel, and trial length, resulting in only one of four requirements being covered.",
+          "evidence": [
+            "Monthly price: Covered",
+            "Project limit: Missing",
+            "Support channel: Missing",
+            "Trial length: Missing"
+          ],
+          "strengths": [
+            "Accurately provides the monthly price."
+          ],
+          "weaknesses": [
+            "Fails to mention the project limit.",
+            "Fails to mention the support channel.",
+            "Fails to mention the trial length."
+          ],
+          "suggestions": [
+            "Include the project limit (5 projects).",
+            "Specify the support channel (email support).",
+            "State the trial length (14 days)."
+          ],
+          "claims": [],
+          "requirements": [
+            {
+              "requirement": "monthly price",
+              "status": "covered",
+              "evidence": "\"Orion costs 20 credits per month.\""
+            },
+            {
+              "requirement": "project limit",
+              "status": "missing",
+              "evidence": "Not addressed"
+            },
+            {
+              "requirement": "support channel",
+              "status": "missing",
+              "evidence": "Not addressed"
+            },
+            {
+              "requirement": "trial length",
+              "status": "missing",
+              "evidence": "Not addressed"
+            }
+          ],
+          "evaluated_with": "llm"
+        }
+      },
+      "warnings": [],
+      "overall_score": 0.54,
+      "verdict": "Incomplete",
+      "confidence": 1.0,
+      "processing_time_seconds": 23.81,
+      "strengths": [
+        "Provides the monthly price as requested.",
+        "Accurately states Orion's monthly price.",
+        "The claim that Orion costs 20 credits per month is directly supported by the context.",
+        "Accurately provides the monthly price."
+      ],
+      "weaknesses": [
+        "Does not provide project limit, support channel, or trial length.",
+        "Fails to mention the project limit.",
+        "Fails to mention the support channel."
+      ],
+      "recommendations": [
+        "Include the missing project limit, support channel, and trial length to fully satisfy the question.",
+        "Include the project limit (5 projects).",
+        "Specify the support channel (email support)."
+      ]
+    }
+  },
+  {
+    "case": {
+      "id": "unknown_fact",
+      "question": "In which year was Orion launched?",
+      "ai_response": "Orion launched in 2019.",
+      "reference_answer": "Orion is a subscription plan.",
+      "source_document": "The Orion plan costs 20 credits per month. It includes 5 projects and email support. It does not include phone support. The trial lasts 14 days.",
+      "expected": "Launch year cannot be verified; do not assert that 2019 is false."
+    },
+    "report": {
+      "metrics": {
+        "relevance": {
+          "metric_name": "relevance",
+          "score": 1.0,
+          "evidence_coverage": null,
+          "reason": "The response directly answers the question by stating the launch year of Orion, staying on topic and addressing the requested information.",
+          "evidence": [
+            "\"Orion launched in 2019.\""
+          ],
+          "strengths": [
+            "Provides the exact year requested.",
+            "Concise and directly relevant."
+          ],
+          "weaknesses": [],
+          "suggestions": [],
+          "claims": [],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "accuracy": {
+          "metric_name": "accuracy",
+          "score": 0.0,
+          "evidence_coverage": 1.0,
+          "reason": "The AI response contains a single factual claim that Orion was launched in 2019. Neither the reference answer nor the source context provide any information about a launch year for Orion. The reference states that Orion is a subscription plan, and the source describes its pricing and features, with no mention of a launch date. Therefore the claim is unsupported and incorrect.",
+          "evidence": [
+            "Reference answer: \"Orion is a subscription plan.\"",
+            "Source context: \"The Orion plan costs 20 credits per month. It includes 5 projects and email support. It does not include phone support. The trial lasts 14 days.\""
+          ],
+          "strengths": [],
+          "weaknesses": [
+            "The claim that Orion launched in 2019 is not supported by the provided reference or source."
+          ],
+          "suggestions": [
+            "Verify the launch year of Orion from a reliable source before stating it.",
+            "If the launch year is unknown, omit the claim or indicate that the information is not available.",
+            "Ensure that any factual statements are directly supported by the reference or source material."
+          ],
+          "claims": [
+            {
+              "claim": "Orion launched in 2019.",
+              "verdict": "INCORRECT",
+              "supported": false,
+              "score": null,
+              "evidence": "Reference answer indicates Orion is a subscription plan; source context provides pricing and features but no launch date."
+            }
+          ],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "groundedness": {
+          "metric_name": "groundedness",
+          "score": 0.0,
+          "evidence_coverage": null,
+          "reason": "The response contains a single factual claim that is not supported by any information in the provided context. The context only describes pricing, features, and trial length of the Orion plan, with no mention of a launch year.",
+          "evidence": [
+            "The Orion plan costs 20 credits per month. It includes 5 projects and email support. It does not include phone support. The trial lasts 14 days."
+          ],
+          "strengths": [],
+          "weaknesses": [
+            "The claim that Orion launched in 2019 is not supported by the context."
+          ],
+          "suggestions": [
+            "Verify the launch year from a reliable source before including it, or omit the claim if no evidence is available."
+          ],
+          "claims": [
+            {
+              "claim": "Orion launched in 2019.",
+              "verdict": "UNSUPPORTED",
+              "supported": false,
+              "score": null,
+              "evidence": "No supporting evidence found"
+            }
+          ],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "completeness": {
+          "metric_name": "completeness",
+          "score": 1.0,
+          "evidence_coverage": null,
+          "reason": "The AI response directly answers the single requirement of the question by providing a launch year.",
+          "evidence": [
+            "\"In which year was Orion launched?\" – answered with \"Orion launched in 2019.\""
+          ],
+          "strengths": [
+            "Directly provides the requested launch year."
+          ],
+          "weaknesses": [],
+          "suggestions": [],
+          "claims": [],
+          "requirements": [
+            {
+              "requirement": "Provide the year Orion was launched",
+              "status": "covered",
+              "evidence": "\"Orion launched in 2019.\""
+            }
+          ],
+          "evaluated_with": "llm"
+        }
+      },
+      "warnings": [],
+      "overall_score": 0.225,
+      "verdict": "Factually Unreliable",
+      "confidence": 1.0,
+      "processing_time_seconds": 39.47,
+      "strengths": [
+        "Provides the exact year requested.",
+        "Concise and directly relevant.",
+        "Directly provides the requested launch year."
+      ],
+      "weaknesses": [
+        "The claim that Orion launched in 2019 is not supported by the provided reference or source.",
+        "The claim that Orion launched in 2019 is not supported by the context."
+      ],
+      "recommendations": [
+        "Verify the launch year of Orion from a reliable source before stating it.",
+        "If the launch year is unknown, omit the claim or indicate that the information is not available.",
+        "Verify the launch year from a reliable source before including it, or omit the claim if no evidence is available."
+      ]
+    }
+  },
+  {
+    "case": {
+      "id": "appropriate_abstention",
+      "question": "Using only the source, in which year was Orion launched?",
+      "ai_response": "The source does not state a launch year, so I cannot determine it.",
+      "source_document": "The Orion plan costs 20 credits per month. It includes 5 projects and email support. It does not include phone support. The trial lasts 14 days.",
+      "expected": "Appropriate abstention should not be a hallucination or factual failure."
+    },
+    "report": {
+      "metrics": {
+        "relevance": {
+          "metric_name": "relevance",
+          "score": 1.0,
+          "evidence_coverage": null,
+          "reason": "The response directly addresses the question by stating that the source does not provide a launch year, which is precisely what the user asked for.",
+          "evidence": [
+            "The source does not state a launch year, so I cannot determine it."
+          ],
+          "strengths": [
+            "Clearly answers the question and acknowledges the limitation of the source."
+          ],
+          "weaknesses": [],
+          "suggestions": [],
+          "claims": [],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "accuracy": {
+          "metric_name": "accuracy",
+          "score": 1.0,
+          "evidence_coverage": 1.0,
+          "reason": "The AI correctly states that the provided source contains no information about Orion's launch year, and therefore cannot determine it. All factual claims made by the AI are verified against the source.",
+          "evidence": [
+            "Source context: \"The Orion plan costs 20 credits per month. It includes 5 projects and email support. It does not include phone support. The trial lasts 14 days.\""
+          ],
+          "strengths": [
+            "Accurately identifies that the source does not mention a launch year.",
+            "Correctly concludes that the launch year cannot be determined from the source."
+          ],
+          "weaknesses": [],
+          "suggestions": [],
+          "claims": [
+            {
+              "claim": "The source does not state a launch year.",
+              "verdict": "CORRECT",
+              "supported": true,
+              "score": null,
+              "evidence": "Source context contains no mention of a launch year."
+            },
+            {
+              "claim": "Therefore I cannot determine the launch year.",
+              "verdict": "CORRECT",
+              "supported": true,
+              "score": null,
+              "evidence": "Logical inference based on the absence of launch year information in the source."
+            }
+          ],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "groundedness": {
+          "metric_name": "groundedness",
+          "score": 1.0,
+          "evidence_coverage": null,
+          "reason": "The AI response correctly states that the source does not provide a launch year, and the provided context indeed contains no mention of a launch year. Therefore the claim is fully supported by the context.",
+          "evidence": [
+            "The Orion plan costs 20 credits per month. It includes 5 projects and email support. It does not include phone support. The trial lasts 14 days."
+          ],
+          "strengths": [
+            "The claim that the source does not state a launch year is directly supported by the absence of any launch year information in the context."
+          ],
+          "weaknesses": [],
+          "suggestions": [],
+          "claims": [
+            {
+              "claim": "The source does not state a launch year, so I cannot determine it.",
+              "verdict": "SUPPORTED",
+              "supported": true,
+              "score": null,
+              "evidence": "The Orion plan costs 20 credits per month. It includes 5 projects and email support. It does not include phone support. The trial lasts 14 days."
+            }
+          ],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "completeness": {
+          "metric_name": "completeness",
+          "score": 1.0,
+          "evidence_coverage": null,
+          "reason": "The AI response correctly acknowledges that the source does not provide a launch year and therefore cannot determine it, which satisfies the requirement to answer the question using only the source.",
+          "evidence": [
+            "\"The source does not state a launch year, so I cannot determine it.\""
+          ],
+          "strengths": [
+            "Accurately identifies the absence of the requested information in the source."
+          ],
+          "weaknesses": [],
+          "suggestions": [],
+          "claims": [],
+          "requirements": [
+            {
+              "requirement": "Using only the source, in which year was Orion launched?",
+              "status": "covered",
+              "evidence": "\"The source does not state a launch year, so I cannot determine it.\""
+            }
+          ],
+          "evaluated_with": "llm"
+        }
+      },
+      "warnings": [],
+      "overall_score": 1.0,
+      "verdict": "Excellent",
+      "confidence": 1.0,
+      "processing_time_seconds": 23.759,
+      "strengths": [
+        "Clearly answers the question and acknowledges the limitation of the source.",
+        "Accurately identifies that the source does not mention a launch year.",
+        "Correctly concludes that the launch year cannot be determined from the source.",
+        "The claim that the source does not state a launch year is directly supported by the absence of any launch year information in the context.",
+        "Accurately identifies the absence of the requested information in the source."
+      ],
+      "weaknesses": [],
+      "recommendations": []
+    }
+  },
+  {
+    "case": {
+      "id": "conflicting_evidence",
+      "question": "What is the monthly price of Orion?",
+      "ai_response": "20 credits per month.",
+      "reference_answer": "Orion costs 20 credits per month.",
+      "source_document": "The current Orion plan costs 35 credits per month.",
+      "expected": "Report evidence conflict and uncertainty, not confident hallucination."
+    },
+    "report": {
+      "metrics": {
+        "relevance": {
+          "metric_name": "relevance",
+          "score": 1.0,
+          "evidence_coverage": null,
+          "reason": "The response directly answers the question about Orion’s monthly price.",
+          "evidence": [
+            "\"20 credits per month.\""
+          ],
+          "strengths": [
+            "Provides the requested price in a concise manner."
+          ],
+          "weaknesses": [],
+          "suggestions": [],
+          "claims": [],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "accuracy": {
+          "metric_name": "accuracy",
+          "score": null,
+          "evidence_coverage": 0.0,
+          "reason": "The AI response contains one atomic claim that matches the reference answer but conflicts with the provided source context. Since the claim is neither verifiable as correct nor incorrect based on the source, it is classified as CONFLICTING, leaving no claims that can be counted as correct or incorrect for scoring.",
+          "evidence": [
+            "\"Orion costs 20 credits per month.\" (AI response) matches the reference answer but contradicts the source context stating 35 credits per month."
+          ],
+          "strengths": [],
+          "weaknesses": [
+            "The claim conflicts with the source context, which states Orion costs 35 credits per month."
+          ],
+          "suggestions": [
+            "Verify the most up-to-date pricing information from an authoritative source before stating the monthly cost.",
+            "If multiple sources exist, indicate the discrepancy and provide context for why the figures differ."
+          ],
+          "claims": [
+            {
+              "claim": "Orion costs 20 credits per month.",
+              "verdict": "CONFLICTING",
+              "supported": null,
+              "score": null,
+              "evidence": "Reference answer: \"Orion costs 20 credits per month.\" Source context: \"The current Orion plan costs 35 credits per month.\""
+            }
+          ],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "groundedness": {
+          "metric_name": "groundedness",
+          "score": 0.0,
+          "evidence_coverage": null,
+          "reason": "The AI response states that the plan costs 20 credits per month, which directly contradicts the provided context that the current Orion plan costs 35 credits per month. No claim in the response is supported by the context.",
+          "evidence": [
+            "\"The current Orion plan costs 35 credits per month.\""
+          ],
+          "strengths": [],
+          "weaknesses": [
+            "The claim that the plan costs 20 credits per month is not supported by the context and is contradicted by the stated cost of 35 credits per month."
+          ],
+          "suggestions": [
+            "Reference the exact cost stated in the context when answering.",
+            "Avoid providing figures that are not present or contradicted by the source material."
+          ],
+          "claims": [
+            {
+              "claim": "20 credits per month",
+              "verdict": "CONTRADICTED",
+              "supported": false,
+              "score": null,
+              "evidence": "\"The current Orion plan costs 35 credits per month.\""
+            }
+          ],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "completeness": {
+          "metric_name": "completeness",
+          "score": 1.0,
+          "evidence_coverage": null,
+          "reason": "The AI response directly provides the monthly price of Orion, which is the sole requirement extracted from the question.",
+          "evidence": [
+            "monthly price of Orion: COVERED"
+          ],
+          "strengths": [
+            "The response gives the exact monthly price requested."
+          ],
+          "weaknesses": [],
+          "suggestions": [],
+          "claims": [],
+          "requirements": [
+            {
+              "requirement": "monthly price of Orion",
+              "status": "covered",
+              "evidence": "20 credits per month."
+            }
+          ],
+          "evaluated_with": "llm"
+        }
+      },
+      "warnings": [
+        "The reference and source disagree. Resolve the conflicting evidence before relying on the score."
+      ],
+      "overall_score": 0.6429,
+      "verdict": "Conflicting Evidence",
+      "confidence": 0.75,
+      "processing_time_seconds": 30.663,
+      "strengths": [
+        "Provides the requested price in a concise manner.",
+        "The response gives the exact monthly price requested."
+      ],
+      "weaknesses": [
+        "The claim conflicts with the source context, which states Orion costs 35 credits per month.",
+        "The claim that the plan costs 20 credits per month is not supported by the context and is contradicted by the stated cost of 35 credits per month."
+      ],
+      "recommendations": [
+        "Verify the most up-to-date pricing information from an authoritative source before stating the monthly cost.",
+        "If multiple sources exist, indicate the discrepancy and provide context for why the figures differ.",
+        "Reference the exact cost stated in the context when answering.",
+        "Avoid providing figures that are not present or contradicted by the source material."
+      ]
+    }
+  }
+]

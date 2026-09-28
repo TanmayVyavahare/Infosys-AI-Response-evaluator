@@ -8,9 +8,12 @@ interface BatchDashboardProps {
   elapsed: number;
   batchResult: BatchEvaluationResponse | null;
   onReset: () => void;
+  onCancel: () => void;
 }
 
-export function BatchDashboard({ onSubmit, loading, elapsed, batchResult, onReset }: BatchDashboardProps) {
+export function BatchDashboard({ onSubmit, loading, elapsed, batchResult, onReset, onCancel }: BatchDashboardProps) {
+  const [uploadError, setUploadError] = useState('');
+  const [reading, setReading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [csvRows, setCsvRows] = useState<string[][]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
@@ -62,34 +65,41 @@ export function BatchDashboard({ onSubmit, loading, elapsed, batchResult, onRese
       row.push(entry);
       lines.push(row);
     }
+    if (insideQuote) throw new Error('A quoted field is not closed. Check the CSV and upload it again.');
     return lines.filter(r => r.some(cell => cell.trim().length > 0));
   };
 
-  const handleFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      const parsed = parseCSV(text);
-      if (parsed.length > 1) {
-        const fileHeaders = parsed[0].map(h => h.trim());
-        setHeaders(fileHeaders);
-        setCsvRows(parsed.slice(1));
-        
-        // Auto-detect columns
-        const qIdx = fileHeaders.findIndex(h => /question|query|prompt/i.test(h));
-        const rIdx = fileHeaders.findIndex(h => /response|output|ai|answer/i.test(h));
-        const refIdx = fileHeaders.findIndex(h => /reference|ground_truth|golden/i.test(h));
-        const sIdx = fileHeaders.findIndex(h => /source|context|document/i.test(h));
-        
-        if (qIdx !== -1) setQuestionCol(fileHeaders[qIdx]);
-        if (rIdx !== -1) setResponseCol(fileHeaders[rIdx]);
-        if (refIdx !== -1) setReferenceCol(fileHeaders[refIdx]);
-        if (sIdx !== -1) setSourceCol(fileHeaders[sIdx]);
-      } else {
-        alert('CSV must contain a header row and at least one data row.');
+  const handleFile = async (file: File) => {
+    if (loading || reading) return;
+    setUploadError('');
+    if (!/\.csv$/i.test(file.name) || file.size > 5 * 1024 * 1024) {
+      setUploadError('Choose a CSV file smaller than 5 MB.');
+      return;
+    }
+    setReading(true);
+    try {
+      const parsed = parseCSV((await file.text()).replace(/^\uFEFF/, ''));
+      if (parsed.length < 2) throw new Error('Include a header row and at least one data row.');
+      if (parsed.length > 51) throw new Error('Upload up to 50 responses at a time. Split this file into smaller batches.');
+      const fileHeaders = parsed[0].map(h => h.trim());
+      if (fileHeaders.some(h => !h) || new Set(fileHeaders.map(h => h.toLowerCase())).size !== fileHeaders.length) {
+        throw new Error('Each column needs a unique, non-empty header.');
       }
-    };
-    reader.readAsText(file);
+      if (parsed.slice(1).some(row => row.length !== fileHeaders.length)) {
+        throw new Error('Every row must have the same number of columns as the header. Put commas inside quoted fields.');
+      }
+      setHeaders(fileHeaders);
+      setCsvRows(parsed.slice(1));
+      setQuestionCol(fileHeaders.find(h => /question|query|prompt/i.test(h)) || '');
+      setResponseCol(fileHeaders.find(h => !/reference|ground_truth|golden/i.test(h) && /response|output|answer/i.test(h)) || '');
+      setReferenceCol(fileHeaders.find(h => /reference|ground_truth|golden/i.test(h)) || '');
+      setSourceCol(fileHeaders.find(h => /source|context|document/i.test(h)) || '');
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : 'Could not read the CSV. Try again.');
+    } finally {
+      setReading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -130,19 +140,20 @@ export function BatchDashboard({ onSubmit, loading, elapsed, batchResult, onRese
       ai_response: row[rIndex]?.trim() || '',
       reference_answer: refIndex !== -1 ? row[refIndex]?.trim() : undefined,
       source_document: sIndex !== -1 ? row[sIndex]?.trim() : undefined,
-    })).filter(req => req.question.length > 0 && req.ai_response.length > 0);
+    }));
   };
 
   const executeBatch = () => {
     const requests = getMappedRequests();
-    if (requests.length === 0) {
-      alert('Could not map fields. Please select valid header columns.');
+    if (!isValidMapping || loading) {
+      setUploadError('Select different question and response columns and fill all required cells.');
       return;
     }
     onSubmit(requests);
   };
 
   const clearUpload = () => {
+    setUploadError('');
     setCsvRows([]);
     setHeaders([]);
     setQuestionCol('');
@@ -155,19 +166,22 @@ export function BatchDashboard({ onSubmit, loading, elapsed, batchResult, onRese
   };
 
   const mappedRequests = getMappedRequests();
-  const isValidMapping = questionCol && responseCol && mappedRequests.length > 0;
+  const invalidRows = mappedRequests.flatMap((request, i) => !request.question || !request.ai_response ? [i + 1] : []);
+  const isValidMapping = questionCol && responseCol && questionCol !== responseCol && mappedRequests.length > 0 && invalidRows.length === 0;
 
   return (
-    <div className="space-y-10 border border-white/5 bg-surface-900/10 p-8 rounded-2xl">
+    <div className="space-y-6 border border-white/5 bg-surface-900/10 p-4 sm:p-6 rounded-2xl">
+      {uploadError && <p role="alert" className="rounded-xl border border-rose-500/30 bg-rose-950/30 p-4 text-sm text-rose-300">{uploadError}</p>}
       {/* 1. Header Control */}
-      <div className="flex items-center justify-between border-b border-white/5 pb-4">
+      <div className="flex flex-wrap gap-3 items-center justify-between border-b border-white/5 pb-4">
         <div>
-          <h2 className="text-xl font-bold text-white tracking-wide">Batch Evaluation Dashboard</h2>
+          <h2 className="text-xl font-bold text-white tracking-wide">Review multiple responses</h2>
           <p className="text-xs text-surface-500 mt-1">Upload a CSV file containing multiple question-answer pairs to assess quality scores in batch.</p>
         </div>
         {(csvRows.length > 0 || batchResult) && (
           <button
             onClick={clearUpload}
+            disabled={loading || reading}
             className="text-xs font-semibold px-4 py-2 rounded-xl border border-rose-500/25 bg-rose-950/20 text-rose-300 hover:bg-rose-900/35 hover:border-rose-400 cursor-pointer transition-all animate-fade-in"
           >
             Clear / Upload New CSV
@@ -182,8 +196,7 @@ export function BatchDashboard({ onSubmit, loading, elapsed, batchResult, onRese
           onDragOver={handleDrag}
           onDragLeave={handleDrag}
           onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-          className={`border border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all duration-300 bg-surface-950/20 min-h-[250px] flex flex-col items-center justify-center space-y-4 ${
+          className={`border border-dashed rounded-2xl p-5 sm:p-10 text-center cursor-pointer transition-all duration-300 bg-surface-950/20 min-h-[250px] flex flex-col items-center justify-center space-y-4 ${
             dragActive
               ? 'border-primary-500 bg-primary-950/15'
               : 'border-white/10 hover:border-primary-500/40 hover:bg-surface-900/30'
@@ -203,13 +216,13 @@ export function BatchDashboard({ onSubmit, loading, elapsed, batchResult, onRese
           </div>
           <div>
             <h3 className="text-sm font-bold text-white">Upload your Q&A Batch CSV</h3>
-            <p className="text-xs text-surface-500 mt-1 max-w-sm mx-auto">Upload a standard CSV file with headers. We will parse and evaluate all pairs concurrently.</p>
+            <p className="text-xs text-surface-500 mt-1 max-w-sm mx-auto">Up to 50 responses · CSV with column headers · Maximum 5 MB</p>
           </div>
-          <div className="flex gap-4">
-            <button className="btn-primary py-2 px-5 text-xs font-semibold">Select CSV File</button>
+          <div className="flex flex-wrap justify-center gap-3">
+            <button disabled={reading} onClick={() => fileInputRef.current?.click()} className="btn-primary py-2 px-5 text-sm font-semibold">{reading ? 'Reading CSV…' : 'Choose CSV file'}</button>
             <button
               type="button"
-              id="load-mock-csv-btn"
+              id="load-mock-csv-btn" disabled={reading}
               onClick={(e) => {
                 e.stopPropagation();
                 const fileHeaders = ['Question', 'AI Response', 'Reference Answer'];
@@ -218,6 +231,8 @@ export function BatchDashboard({ onSubmit, loading, elapsed, batchResult, onRese
                   ['What is the speed of light?', 'The speed of light is 300000 km/s in a vacuum.', 'The speed of light is 299792458 meters per second.'],
                   ['What is photosynthesis?', 'Photosynthesis is the process plants use to convert sunlight into food.', 'Plants use photosynthesis to make glucose.']
                 ];
+                setUploadError('');
+                setSourceCol('');
                 setHeaders(fileHeaders);
                 setCsvRows(mockRows);
                 setQuestionCol('Question');
@@ -237,15 +252,15 @@ export function BatchDashboard({ onSubmit, loading, elapsed, batchResult, onRese
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fade-in">
           {/* Mapping settings */}
           <div className="lg:col-span-4 glass-card p-6 bg-surface-900/40 rounded-xl space-y-5 border-white/5">
-            <h3 className="text-[14px] font-bold text-white tracking-wide border-b border-white/5 pb-2">CSV Column Mapping</h3>
+            <h3 className="text-[14px] font-bold text-white tracking-wide border-b border-white/5 pb-2">Match your columns</h3>
             
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <label className="block text-[10px] font-black text-surface-400 tracking-wider">
+                <label htmlFor="batch-question" className="block text-[10px] font-black text-surface-400 tracking-wider">
                   QUESTION / QUERY COLUMN <span className="text-primary-400">*</span>
                 </label>
                 <select
-                  value={questionCol}
+                  id="batch-question" value={questionCol}
                   onChange={(e) => setQuestionCol(e.target.value)}
                   className="input-field py-2.5 text-xs bg-surface-950 border-white/10"
                 >
@@ -255,11 +270,11 @@ export function BatchDashboard({ onSubmit, loading, elapsed, batchResult, onRese
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-[10px] font-black text-surface-400 tracking-wider">
+                <label htmlFor="batch-response" className="block text-[10px] font-black text-surface-400 tracking-wider">
                   AI RESPONSE COLUMN <span className="text-primary-400">*</span>
                 </label>
                 <select
-                  value={responseCol}
+                  id="batch-response" value={responseCol}
                   onChange={(e) => setResponseCol(e.target.value)}
                   className="input-field py-2.5 text-xs bg-surface-950 border-white/10"
                 >
@@ -269,11 +284,11 @@ export function BatchDashboard({ onSubmit, loading, elapsed, batchResult, onRese
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-[10px] font-black text-surface-400 tracking-wider">
+                <label htmlFor="batch-reference" className="block text-[10px] font-black text-surface-400 tracking-wider">
                   REFERENCE ANSWER COLUMN (OPTIONAL)
                 </label>
                 <select
-                  value={referenceCol}
+                  id="batch-reference" value={referenceCol}
                   onChange={(e) => setReferenceCol(e.target.value)}
                   className="input-field py-2.5 text-xs bg-surface-950 border-white/10"
                 >
@@ -283,11 +298,11 @@ export function BatchDashboard({ onSubmit, loading, elapsed, batchResult, onRese
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-[10px] font-black text-surface-400 tracking-wider">
+                <label htmlFor="batch-source" className="block text-[10px] font-black text-surface-400 tracking-wider">
                   SOURCE DOCUMENT / RAG COLUMN (OPTIONAL)
                 </label>
                 <select
-                  value={sourceCol}
+                  id="batch-source" value={sourceCol}
                   onChange={(e) => setSourceCol(e.target.value)}
                   className="input-field py-2.5 text-xs bg-surface-950 border-white/10"
                 >
@@ -297,13 +312,15 @@ export function BatchDashboard({ onSubmit, loading, elapsed, batchResult, onRese
               </div>
             </div>
 
-            <div className="pt-3">
+            <div className="pt-3 space-y-3">
+              {questionCol && questionCol === responseCol && <p role="alert" className="text-sm text-rose-300">Choose a different column for the AI response.</p>}
+              {invalidRows.length > 0 && <p role="alert" className="text-sm text-rose-300">Missing question or response in data rows {invalidRows.join(', ')}. Fill these cells and upload again. No rows will be skipped.</p>}
               <button
                 onClick={executeBatch}
                 disabled={!isValidMapping}
                 className="w-full bg-gradient-to-r from-primary-600 to-accent-purple hover:from-primary-500 hover:to-accent-purple/90 text-white font-bold py-3 px-5 rounded-xl shadow-lg shadow-primary-500/10 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all text-xs"
               >
-                Run Batch Evaluation ({mappedRequests.length} rows)
+                Review batch ({mappedRequests.length} rows)
               </button>
             </div>
           </div>
@@ -311,8 +328,8 @@ export function BatchDashboard({ onSubmit, loading, elapsed, batchResult, onRese
           {/* CSV Preview */}
           <div className="lg:col-span-8 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-black text-surface-400 tracking-wider">Ingested Row Preview</h3>
-              <span className="text-[10px] font-semibold text-primary-400 bg-primary-950/50 px-2 py-0.5 rounded border border-primary-500/20">{csvRows.length} Rows Ingested</span>
+              <h3 className="text-xs font-black text-surface-400 tracking-wider">Preview your responses</h3>
+              <span className="text-[10px] font-semibold text-primary-400 bg-primary-950/50 px-2 py-0.5 rounded border border-primary-500/20">{csvRows.length} rows loaded</span>
             </div>
             
             <div className="glass-card overflow-x-auto border-white/5 bg-surface-900/15 max-h-[400px]">
@@ -361,7 +378,7 @@ export function BatchDashboard({ onSubmit, loading, elapsed, batchResult, onRese
           </div>
           <div>
             <h4 className="text-sm font-bold text-white tracking-wide mb-1">Evaluating Batch Request</h4>
-            <p className="text-xs text-surface-500 max-w-sm mx-auto">Running concurrent judge agents on all items. This may take a moment depending on the model's throughput.</p>
+            <p className="text-xs text-surface-500 max-w-sm mx-auto">Checking each response. Larger batches take longer; you can cancel and keep your upload.</p>
           </div>
           <div className="text-xs text-primary-300 font-mono-code bg-primary-950/60 border border-primary-800/40 px-3 py-1.5 rounded-lg">
             Elapsed Time: {elapsed.toFixed(1)}s
@@ -369,6 +386,7 @@ export function BatchDashboard({ onSubmit, loading, elapsed, batchResult, onRese
         </div>
       )}
 
+      {loading && <button className="btn-ghost px-5 py-3 text-sm" onClick={onCancel}>Cancel batch review</button>}
       {/* 5. Aggregate Analytics Dashboard */}
       {batchResult && !loading && (
         <div className="space-y-10 animate-fade-in">
@@ -394,6 +412,7 @@ export function BatchDashboard({ onSubmit, loading, elapsed, batchResult, onRese
               <p className="text-[10px] text-surface-400 uppercase font-black">
                 {batchResult.total_count} Evaluated Items
               </p>
+              <p className="text-xs text-surface-400">Average of available scores. Inspect each row for missing or conflicting evidence.</p>
             </div>
 
             {/* Verdict distributions */}
@@ -406,7 +425,7 @@ export function BatchDashboard({ onSubmit, loading, elapsed, batchResult, onRese
                     const pct = (count / batchResult.total_count) * 100;
                     let color = 'bg-surface-600';
                     if (verdict === 'Excellent' || verdict === 'Good') color = 'bg-emerald-500';
-                    else if (verdict === 'Acceptable') color = 'bg-yellow-500';
+                    else if (['Acceptable', 'Limited Evidence', 'Conflicting Evidence', 'Unsupported Claims', 'Incomplete'].includes(verdict)) color = 'bg-yellow-500';
                     else color = 'bg-rose-500';
 
                     return (
@@ -458,7 +477,7 @@ export function BatchDashboard({ onSubmit, loading, elapsed, batchResult, onRese
                 <thead>
                   <tr className="border-b border-white/5 text-[10px] font-black text-surface-400 uppercase tracking-wider bg-surface-950/20">
                     <th className="p-3.5 w-12 text-center border-r border-white/5">Row</th>
-                    <th className="p-3.5">Relevance strength</th>
+                    <th className="p-3.5">Question</th>
                     <th className="p-3.5">Primary weakness</th>
                     <th className="p-3.5 w-24 text-center">Score</th>
                     <th className="p-3.5 w-40">Verdict</th>
@@ -470,7 +489,7 @@ export function BatchDashboard({ onSubmit, loading, elapsed, batchResult, onRese
                     let verdictColor = 'text-surface-400 bg-surface-950/50 border-surface-900';
                     if (res.verdict === 'Excellent' || res.verdict === 'Good') {
                       verdictColor = 'text-emerald-400 bg-emerald-950/20 border-emerald-500/20';
-                    } else if (res.verdict === 'Acceptable') {
+                    } else if (['Acceptable', 'Limited Evidence', 'Conflicting Evidence', 'Unsupported Claims', 'Incomplete'].includes(res.verdict)) {
                       verdictColor = 'text-yellow-400 bg-yellow-950/20 border-yellow-500/20';
                     } else {
                       verdictColor = 'text-rose-400 bg-rose-950/20 border-rose-500/20';
@@ -489,10 +508,10 @@ export function BatchDashboard({ onSubmit, loading, elapsed, batchResult, onRese
                       >
                         <td className="p-3.5 text-center text-surface-500 font-mono-code border-r border-white/5 bg-surface-950/10">{idx + 1}</td>
                         <td className="p-3.5 truncate max-w-[220px] text-surface-300 font-medium">
-                          <span className="text-surface-300 block font-normal">{res.strengths[0] || 'No strengths flagged'}</span>
+                          <span className="text-surface-300 block font-normal" title={mappedRequests[idx]?.question}>{mappedRequests[idx]?.question || `Response ${idx + 1}`}</span>
                         </td>
                         <td className="p-3.5 truncate max-w-[260px] text-surface-400">
-                          {res.weaknesses[0] || 'Looks good'}
+                          {res.weaknesses[0] || res.warnings?.[0] || 'No issues flagged'}
                         </td>
                         <td className="p-3.5 text-center">
                           <span className="text-xs font-black text-white font-mono-code bg-surface-950/60 border border-white/5 px-2 py-1 rounded">
@@ -545,7 +564,7 @@ export function BatchDashboard({ onSubmit, loading, elapsed, batchResult, onRese
                   Close Detail Inspector
                 </button>
               </div>
-              <ResultsPanel result={selectedInspectRow} />
+              <ResultsPanel key={inspectIndex} result={selectedInspectRow} />
             </div>
           )}
 

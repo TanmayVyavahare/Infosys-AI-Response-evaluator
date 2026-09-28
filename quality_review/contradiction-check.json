@@ -1,0 +1,115 @@
+[
+  {
+    "case": {
+      "id": "wrong_numbers",
+      "question": "What does Orion cost and how many projects are included?",
+      "ai_response": "Orion costs 200 credits per month and includes 50 projects.",
+      "reference_answer": "20 credits monthly; 5 projects.",
+      "source_document": "The Orion plan costs 20 credits per month. It includes 5 projects and email support. It does not include phone support. The trial lasts 14 days.",
+      "expected": "Relevant and complete, but inaccurate and contradicted; low overall score."
+    },
+    "report": {
+      "metrics": {
+        "relevance": {
+          "metric_name": "relevance",
+          "score": null,
+          "evidence_coverage": null,
+          "reason": "Evaluation failed: DLL load failed while importing murmurhash: An Application Control policy has blocked this file.",
+          "evidence": [],
+          "strengths": [],
+          "weaknesses": [
+            "Could not evaluate: DLL load failed while importing murmurhash: An Application Control policy has blocked this file."
+          ],
+          "suggestions": [],
+          "claims": [],
+          "requirements": [],
+          "evaluated_with": "error"
+        },
+        "accuracy": {
+          "metric_name": "accuracy",
+          "score": null,
+          "evidence_coverage": null,
+          "reason": "Evaluation failed: DLL load failed while importing murmurhash: An Application Control policy has blocked this file.",
+          "evidence": [],
+          "strengths": [],
+          "weaknesses": [
+            "Could not evaluate: DLL load failed while importing murmurhash: An Application Control policy has blocked this file."
+          ],
+          "suggestions": [],
+          "claims": [],
+          "requirements": [],
+          "evaluated_with": "error"
+        },
+        "groundedness": {
+          "metric_name": "groundedness",
+          "score": 0.0,
+          "evidence_coverage": null,
+          "reason": "Both factual claims in the AI response contradict the provided context.",
+          "evidence": [
+            "\"The Orion plan costs 20 credits per month.\"",
+            "\"It includes 5 projects\""
+          ],
+          "strengths": [],
+          "weaknesses": [
+            "Orion costs 200 credits per month",
+            "Orion includes 50 projects"
+          ],
+          "suggestions": [
+            "Verify numerical values against the source text before stating them.",
+            "Avoid making claims that are not directly supported by the context."
+          ],
+          "claims": [
+            {
+              "claim": "Orion costs 200 credits per month",
+              "verdict": "CONTRADICTED",
+              "supported": false,
+              "score": null,
+              "evidence": "\"The Orion plan costs 20 credits per month.\""
+            },
+            {
+              "claim": "Orion includes 50 projects",
+              "verdict": "CONTRADICTED",
+              "supported": false,
+              "score": null,
+              "evidence": "\"It includes 5 projects\""
+            }
+          ],
+          "requirements": [],
+          "evaluated_with": "llm"
+        },
+        "completeness": {
+          "metric_name": "completeness",
+          "score": null,
+          "evidence_coverage": null,
+          "reason": "Evaluation failed: DLL load failed while importing murmurhash: An Application Control policy has blocked this file.",
+          "evidence": [],
+          "strengths": [],
+          "weaknesses": [
+            "Could not evaluate: DLL load failed while importing murmurhash: An Application Control policy has blocked this file."
+          ],
+          "suggestions": [],
+          "claims": [],
+          "requirements": [],
+          "evaluated_with": "error"
+        }
+      },
+      "warnings": [],
+      "overall_score": 0.0,
+      "verdict": "Unsupported Claims",
+      "confidence": 0.25,
+      "processing_time_seconds": 110.798,
+      "strengths": [],
+      "weaknesses": [
+        "Could not evaluate: DLL load failed while importing murmurhash: An Application Control policy has blocked this file.",
+        "Could not evaluate: DLL load failed while importing murmurhash: An Application Control policy has blocked this file.",
+        "Orion costs 200 credits per month",
+        "Orion includes 50 projects",
+        "Could not evaluate: DLL load failed while importing murmurhash: An Application Control policy has blocked this file."
+      ],
+      "recommendations": [
+        "Verify numerical values against the source text before stating them.",
+        "Avoid making claims that are not directly supported by the context."
+      ]
+    }
+  }
+]

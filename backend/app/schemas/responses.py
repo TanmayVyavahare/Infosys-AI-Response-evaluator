@@ -15,6 +15,7 @@ class EvaluationResponse(BaseModel):
     metrics: dict[str, MetricResult] = Field(
         description="Per-metric results keyed by metric name"
     )
+    warnings: list[str] = Field(default_factory=list, description="Limitations affecting this review")
     overall_score: Optional[float] = Field(
         default=None,
         description="Weighted aggregate score (0.0–1.0)",
@@ -23,7 +24,7 @@ class EvaluationResponse(BaseModel):
         description="Overall verdict label (Excellent/Good/Acceptable/Poor/Unacceptable)"
     )
     confidence: float = Field(
-        description="Confidence in the verdict (0.0–1.0)"
+        description="Legacy field: fraction of four checks scored, NOT calibrated confidence in correctness"
     )
     processing_time_seconds: float = Field(
         description="Total wall-clock time for evaluation"

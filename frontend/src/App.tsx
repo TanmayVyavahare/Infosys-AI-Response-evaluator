@@ -64,33 +64,37 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 }
 
 function MainApp() {
-  const { result, batchResult, loading, error, elapsed, submit, submitBatch, reset } = useEvaluation();
-  const [evalKey, setEvalKey] = useState(0);
+  const single = useEvaluation();
+  const batch = useEvaluation();
+  const { result, loading, error, elapsed, submit, cancel } = single;
+  const { batchResult, submitBatch } = batch;
+  const [singleKey, setSingleKey] = useState(0);
+  const [batchKey, setBatchKey] = useState(0);
   const [mode, setMode] = useState<'single' | 'batch'>('single');
 
   const handleReset = () => {
-    reset();
-    setEvalKey((prev) => prev + 1);
+    if (mode === 'single') { single.reset(); setSingleKey(key => key + 1); }
+    else { batch.reset(); setBatchKey(key => key + 1); }
   };
 
   return (
     <div className="min-h-screen flex flex-col animate-fade-in">
       {/* Sticky Header */}
-      <Header hasResult={Boolean(result || batchResult)} onReset={handleReset} />
+      <Header hasResult={Boolean(mode === 'single' ? result : batchResult)} onReset={handleReset} />
 
       {/* Main Content Container */}
-      <main className="max-w-[1650px] mx-auto px-6 sm:px-8 py-8 sm:py-10 flex-1 w-full">
+      <main className="max-w-[1440px] mx-auto px-4 sm:px-8 py-6 sm:py-8 flex-1 w-full">
         <ErrorBoundary onReset={handleReset}>
           <div className="workspace-heading">
             <div>
               <h2>Review an AI response</h2>
-              <p>Get a clear quality report in a few seconds.</p>
+              <p>Check what works, find gaps, and improve your next answer.</p>
             </div>
-            <div className="mode-switch" role="tablist" aria-label="Evaluation type">
+            <div className="mode-switch" role="group" aria-label="Evaluation type">
             <button
-              onClick={() => { handleReset(); setMode('single'); }}
-              role="tab"
-              aria-selected={mode === 'single'}
+              onClick={() => setMode('single')} disabled={batch.loading}
+
+              aria-pressed={mode === 'single'}
               className={`mode-switch-button ${
                 mode === 'single'
                   ? 'mode-switch-button-active'
@@ -101,9 +105,9 @@ function MainApp() {
               <span className="hidden sm:inline text-[11px] font-medium opacity-70">Review one answer</span>
             </button>
             <button
-              onClick={() => { handleReset(); setMode('batch'); }}
-              role="tab"
-              aria-selected={mode === 'batch'}
+              onClick={() => setMode('batch')} disabled={loading}
+
+              aria-pressed={mode === 'batch'}
               className={`mode-switch-button ${
                 mode === 'batch'
                   ? 'mode-switch-button-active'
@@ -116,25 +120,26 @@ function MainApp() {
             </div>
           </div>
 
-          {mode === 'single' ? (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+          <section hidden={mode !== 'single'} aria-label="Single response review">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               {/* Left panel: Form parameters */}
-              <div className="lg:col-span-4 col-span-1 glass-card p-6 sm:p-8 border-white/5 bg-surface-900/40 rounded-2xl lg:sticky lg:top-24">
+              <div className="lg:col-span-5 col-span-1 glass-card p-5 sm:p-6 border-white/5 bg-surface-900/40 rounded-2xl">
                 <EvaluationForm
-                  key={evalKey}
+                  key={singleKey}
                   onSubmit={submit}
                   loading={loading}
                   elapsed={elapsed}
+                  onCancel={cancel}
                 />
               </div>
 
               {/* Right panel: Agents & Executive Dashboard */}
-              <div className="lg:col-span-8 col-span-1 space-y-8">
+              <div className="lg:col-span-7 col-span-1 space-y-6 min-w-0">
                 {loading && <AgentGrid result={result} loading={loading} />}
 
                 {/* Error Callout */}
                 {error && (
-                  <div className="glass-card p-0 overflow-hidden border-rose-500/30 bg-rose-950/15 animate-fade-in">
+                  <div role="alert" className="glass-card p-0 overflow-hidden border-rose-500/30 bg-rose-950/15 animate-fade-in">
                     <div className="h-[2px] bg-gradient-to-r from-transparent via-rose-500 to-transparent"></div>
                     <div className="p-5 space-y-2">
                       <div className="flex items-center gap-2 text-rose-400 font-semibold text-sm">
@@ -152,7 +157,7 @@ function MainApp() {
 
                 {/* Ready for Evaluation State */}
                 {!result && !loading && (
-                  <div className="empty-state min-h-[560px]">
+                  <div className="empty-state min-h-[320px] lg:min-h-[480px]">
                     <div className="empty-state-icon">✦</div>
                     <h4>Your report will appear here</h4>
                     <p>Add the question and AI response, then select <strong>Review response</strong>. We’ll highlight what is working and what needs attention.</p>
@@ -168,10 +173,10 @@ function MainApp() {
                     </div>
                     <div>
                       <h4 className="text-sm font-bold text-white tracking-wide mb-1">
-                        Evaluating Quality Metrics
+                        Reviewing your response
                       </h4>
                       <p className="text-xs text-surface-500 max-w-md">
-                        Running four autonomous LLM agents in parallel: Relevance, Factual Accuracy, Groundedness, and Completeness.
+                        Checking relevance, accuracy, support from your sources, and completeness. You can cancel and keep your inputs.
                       </p>
                     </div>
                     <div className="text-xs text-primary-300 font-mono-code bg-primary-950/60 border border-primary-800/40 px-3 py-1.5 rounded-lg">
@@ -186,10 +191,11 @@ function MainApp() {
                 )}
               </div>
             </div>
-          ) : (
+          </section>
+          <section hidden={mode !== 'batch'} aria-label="Batch review">
             <div className="space-y-6">
-              {error && (
-                <div className="glass-card p-0 overflow-hidden border-rose-500/30 bg-rose-950/15 animate-fade-in">
+              {batch.error && (
+                <div role="alert" className="glass-card p-0 overflow-hidden border-rose-500/30 bg-rose-950/15 animate-fade-in">
                   <div className="h-[2px] bg-gradient-to-r from-transparent via-rose-500 to-transparent"></div>
                   <div className="p-5 space-y-2">
                     <div className="flex items-center gap-2 text-rose-400 font-semibold text-sm">
@@ -199,20 +205,22 @@ function MainApp() {
                       <span>Batch Evaluation Error</span>
                     </div>
                     <p className="text-xs text-rose-300 leading-relaxed font-mono-code">
-                      {error}
+                      {batch.error}
                     </p>
                   </div>
                 </div>
               )}
               <BatchDashboard
+                key={batchKey}
                 onSubmit={submitBatch}
-                loading={loading}
-                elapsed={elapsed}
+                loading={batch.loading}
+                elapsed={batch.elapsed}
+                onCancel={batch.cancel}
                 batchResult={batchResult}
                 onReset={handleReset}
               />
             </div>
-          )}
+          </section>
         </ErrorBoundary>
       </main>
 
@@ -224,7 +232,7 @@ function MainApp() {
             <span className="text-surface-600">—</span>
             <span>AI Response Quality Assessment Engine</span>
           </div>
-          <div className="flex items-center gap-3 text-[10px] font-medium text-surface-500">
+          <div className="flex flex-wrap justify-center items-center gap-3 text-[10px] font-medium text-surface-500">
             <span className="flex items-center gap-1">🎯 Relevance</span>
             <span className="text-surface-700">•</span>
             <span className="flex items-center gap-1">✅ Accuracy</span>

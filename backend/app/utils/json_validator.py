@@ -7,6 +7,7 @@ JSON output from LLMs, with retry and fallback logic.
 from __future__ import annotations
 
 import json
+import math
 import re
 from typing import Any, Optional
 
@@ -88,6 +89,8 @@ def validate_llm_response(
     Returns:
         Parsed and validated dictionary, or None on failure.
     """
+    if not isinstance(raw_text, str):
+        return None
     json_str = extract_json_from_text(raw_text)
     if not json_str:
         logger.warning(
@@ -119,38 +122,70 @@ def validate_llm_response(
         )
         return None
 
-    # Normalize score to float in [0, 1]
-    try:
-        score = float(data["score"])
-        if score < 0:
-            score = 0.0
-        elif score > 1:
-            # Handle 0–10 or 0–100 scales
-            if score <= 10:
-                score = score / 10.0
-            elif score <= 100:
-                score = score / 100.0
-            else:
-                score = 1.0
-        data["score"] = round(score, 4)
-    except (ValueError, TypeError):
-        logger.warning(
-            "Invalid score value '%s' for %s", data.get("score"), metric_name
-        )
+    # Reject ambiguous scales/non-finite values instead of quietly changing them.
+    score = data["score"]
+    if score is None:
+        if metric_name not in ("accuracy", "groundedness", "completeness"):
+            return None
+    elif isinstance(score, bool) or not isinstance(score, (int, float)) or not math.isfinite(score) or not 0 <= score <= 1:
+        logger.warning("Invalid 0-1 score for %s", metric_name)
         return None
+    else:
+        data["score"] = round(score, 4)
 
-    # Ensure list fields are lists
+    if not isinstance(data["reason"], str) or not data["reason"].strip():
+        return None
     for field in ("evidence", "strengths", "weaknesses", "suggestions"):
-        val = data.get(field)
+        val = data.get(field, [])
         if val is None:
-            data[field] = []
+            val = []
         elif isinstance(val, str):
-            data[field] = [val] if val.strip() else []
-        elif not isinstance(val, list):
-            data[field] = []
+            val = [val]
+        if not isinstance(val, list) or any(not isinstance(item, str) for item in val):
+            return None
+        data[field] = [item.strip() for item in val if item.strip() and item.strip().lower().rstrip('.') not in ("none", "n/a", "no issues", "none needed")]
 
-    # Ensure reason is a string
-    if not isinstance(data.get("reason"), str):
-        data["reason"] = str(data.get("reason", ""))
+    verdicts = {
+        "accuracy": {"CORRECT", "INCORRECT", "UNVERIFIABLE", "CONFLICTING"},
+        "groundedness": {"SUPPORTED", "UNSUPPORTED", "CONTRADICTED"},
+    }
+    if metric_name in verdicts:
+        claims = data.get("claims")
+        if not isinstance(claims, list):
+            return None
+        for claim in claims:
+            if not isinstance(claim, dict) or not isinstance(claim.get("claim"), str) or not claim["claim"].strip():
+                return None
+            verdict = claim.get("verdict")
+            if not isinstance(verdict, str) or verdict.upper() not in verdicts[metric_name]:
+                return None
+            evidence = claim.get("evidence")
+            if evidence is not None and not isinstance(evidence, str):
+                return None
+            if verdict.upper() in ("CORRECT", "INCORRECT", "SUPPORTED", "CONTRADICTED", "CONFLICTING") and (not evidence or not evidence.strip()):
+                return None
+            if metric_name == "accuracy" and verdict.upper() == "INCORRECT":
+                quote = claim.get("contradicting_quote")
+                if not isinstance(quote, str) or not quote.strip():
+                    return None
+        data["claims"] = claims
+    else:
+        data["claims"] = []
+
+    if metric_name == "completeness":
+        requirements = data.get("requirements")
+        if not isinstance(requirements, list) or not requirements:
+            return None
+        for requirement in requirements:
+            if not isinstance(requirement, dict) or not isinstance(requirement.get("requirement"), str) or not requirement["requirement"].strip():
+                return None
+            status = requirement.get("status")
+            if not isinstance(status, str) or status.lower() not in ("covered", "partial", "missing"):
+                return None
+            if requirement.get("evidence") is not None and not isinstance(requirement["evidence"], str):
+                return None
+        data["requirements"] = requirements
+    else:
+        data["requirements"] = []
 
     return data
