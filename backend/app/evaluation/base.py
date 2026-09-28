@@ -119,6 +119,7 @@ class BaseEvaluator(ABC):
         # Fallback to local NLP
         try:
             result = self._evaluate_with_fallback(package)
+            result.review_warning = self._fallback_warning(llm_failure)
             return result
         except Exception as exc:
             logger.error(
@@ -126,8 +127,37 @@ class BaseEvaluator(ABC):
                 self.metric_name,
                 exc,
             )
-            message = f"{llm_failure} Local review is also unavailable on this computer." if llm_failure else "Local review is unavailable on this computer."
+            message = self._fallback_warning(llm_failure) + " Local review is also unavailable on this computer."
             return self._error_result(message)
+
+    def _unverified_fact_result(self, package: EvaluationPackage) -> MetricResult:
+        from app.evaluation.fallbacks.claims import ClaimExtractor
+        from app.schemas.common import ClaimDetail
+
+        return MetricResult(
+            metric_name=self.metric_name, score=None, evidence_coverage=0.0,
+            reason="Local text similarity cannot verify factual claims. An AI review is required for this check.",
+            suggestions=["Retry when AI review is available to verify these claims."],
+            claims=[ClaimDetail(claim=text, verdict="UNVERIFIABLE", supported=None,
+                                evidence="AI verification is unavailable; the supplied evidence has not been assessed for this claim.")
+                    for text in ClaimExtractor().extract_claims(package.ai_response)],
+            evaluated_with="fallback",
+        )
+
+    def _fallback_warning(self, failure: str | None) -> str:
+        if self.llm_provider is None:
+            return "AI review is not configured. Local estimates cannot verify facts or reliably judge complex instructions."
+        # Do not expose raw provider exceptions/URLs/credentials in the report.
+        detail = (failure or "").lower()
+        if "daily token limit" in detail:
+            cause = "The AI service reached its daily token limit. Wait for the limit to reset and retry."
+        elif any(word in detail for word in ("quota", "rate limit", "rate-limited", "429")):
+            cause = "The AI service reached its usage limit. Wait for the limit to reset and retry."
+        elif any(word in detail for word in ("401", "authentication", "api key")):
+            cause = "The AI service could not authenticate. Check the server API key and restart the backend."
+        else:
+            cause = "The AI service could not complete a valid review. Retry the review."
+        return cause + " Local estimates cannot verify facts or reliably judge complex instructions."
 
     async def _try_llm_evaluation(
         self, package: EvaluationPackage

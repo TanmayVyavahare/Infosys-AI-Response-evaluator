@@ -1,0 +1,295 @@
+{
+  "timestamp": "2026-09-28T18:22:41.890196+00:00",
+  "model": "openai/gpt-oss-20b",
+  "cases": [
+    {
+      "id": "history_complete",
+      "input": {
+        "question": "Who was the first President of the United States and when did he serve?",
+        "ai_response": "George Washington was the first President of the United States, serving from 1789 to 1797.",
+        "reference_answer": "George Washington served as the first President of the United States from 1789 to 1797.",
+        "source_document": null
+      },
+      "expected": {
+        "relevance": [
+          0.9,
+          1
+        ],
+        "accuracy": [
+          1,
+          1
+        ],
+        "completeness": [
+          1,
+          1
+        ]
+      },
+      "passed": false,
+      "failures": [
+        "accuracy: no live AI judgment",
+        "accuracy: expected [1, 1], got None",
+        "completeness: no live AI judgment",
+        "completeness: expected [1, 1], got 0.5"
+      ],
+      "report": {
+        "metrics": {
+          "relevance": {
+            "metric_name": "relevance",
+            "score": 1.0,
+            "evidence_coverage": null,
+            "reason": "The response directly answers both parts of the question—identifying George Washington as the first President and giving his term dates—without any off‑topic content.",
+            "review_warning": null,
+            "evidence": [
+              "\"George Washington was the first President of the United States, serving from 1789 to 1797.\""
+            ],
+            "strengths": [
+              "Provides the requested name and exact service period in a concise manner."
+            ],
+            "weaknesses": [],
+            "suggestions": [],
+            "claims": [],
+            "requirements": [],
+            "evaluated_with": "llm"
+          },
+          "accuracy": {
+            "metric_name": "accuracy",
+            "score": null,
+            "evidence_coverage": 0.0,
+            "reason": "Local text similarity cannot verify factual claims. An AI review is required for this check.",
+            "review_warning": "The AI service reached its daily token limit. Wait for the limit to reset and retry. Local estimates cannot verify facts or reliably judge complex instructions.",
+            "evidence": [],
+            "strengths": [],
+            "weaknesses": [],
+            "suggestions": [
+              "Retry when AI review is available to verify these claims."
+            ],
+            "claims": [
+              {
+                "claim": "George Washington was the first President of the United States, serving from 1789 to 1797.",
+                "verdict": "UNVERIFIABLE",
+                "supported": null,
+                "score": null,
+                "evidence": null
+              }
+            ],
+            "requirements": [],
+            "evaluated_with": "fallback"
+          },
+          "groundedness": {
+            "metric_name": "groundedness",
+            "score": null,
+            "evidence_coverage": null,
+            "reason": "Groundedness cannot be verified — no source context available. Provide a source document to enable hallucination detection.",
+            "review_warning": null,
+            "evidence": [],
+            "strengths": [],
+            "weaknesses": [
+              "No context available to check claims against."
+            ],
+            "suggestions": [
+              "Upload a source document to enable groundedness evaluation."
+            ],
+            "claims": [],
+            "requirements": [],
+            "evaluated_with": "fallback"
+          },
+          "completeness": {
+            "metric_name": "completeness",
+            "score": 0.5,
+            "evidence_coverage": null,
+            "reason": "Estimated coverage: 1 covered, 0 partial, 1 missing out of 2 requirements. Completeness score: 0.50.",
+            "review_warning": "The AI service reached its daily token limit. Wait for the limit to reset and retry. Local estimates cannot verify facts or reliably judge complex instructions.",
+            "evidence": [],
+            "strengths": [
+              "Covers: Who was the first President of the United States"
+            ],
+            "weaknesses": [
+              "Missing: when did he serve"
+            ],
+            "suggestions": [
+              "Address the 1 missing requirement(s) to improve completeness."
+            ],
+            "claims": [],
+            "requirements": [
+              {
+                "requirement": "Who was the first President of the United States",
+                "status": "covered",
+                "evidence": "George Washington was the first President of the United States, serving from 1789 to 1797."
+              },
+              {
+                "requirement": "when did he serve",
+                "status": "missing",
+                "evidence": "Not addressed"
+              }
+            ],
+            "evaluated_with": "fallback"
+          }
+        },
+        "warnings": [
+          "The AI service reached its daily token limit. Wait for the limit to reset and retry. Local estimates cannot verify facts or reliably judge complex instructions."
+        ],
+        "overall_score": 0.7778,
+        "verdict": "Local Estimate",
+        "confidence": 0.5,
+        "processing_time_seconds": 14.778,
+        "strengths": [
+          "Provides the requested name and exact service period in a concise manner.",
+          "Covers: Who was the first President of the United States"
+        ],
+        "weaknesses": [
+          "No context available to check claims against.",
+          "Missing: when did he serve"
+        ],
+        "recommendations": [
+          "Retry when AI review is available to verify these claims.",
+          "Upload a source document to enable groundedness evaluation.",
+          "Address the 1 missing requirement(s) to improve completeness."
+        ]
+      }
+    },
+    {
+      "id": "history_incomplete",
+      "input": {
+        "question": "Who was the first President of the United States and when did he serve?",
+        "ai_response": "George Washington was the first President of the United States.",
+        "reference_answer": "George Washington served as the first President of the United States from 1789 to 1797.",
+        "source_document": null
+      },
+      "expected": {
+        "accuracy": [
+          1,
+          1
+        ],
+        "completeness": [
+          0,
+          0.5
+        ]
+      },
+      "passed": false,
+      "failures": [
+        "accuracy: no live AI judgment",
+        "accuracy: expected [1, 1], got None",
+        "completeness: no live AI judgment"
+      ],
+      "report": {
+        "metrics": {
+          "relevance": {
+            "metric_name": "relevance",
+            "score": 0.9,
+            "evidence_coverage": null,
+            "reason": "The response is highly relevant to the question based on semantic and topic analysis.",
+            "review_warning": "The AI service reached its daily token limit. Wait for the limit to reset and retry. Local estimates cannot verify facts or reliably judge complex instructions.",
+            "evidence": [
+              "Semantic similarity: 0.710",
+              "Topic similarity: 0.710",
+              "Entity overlap: 0.000",
+              "Reference answer similarity: 0.900"
+            ],
+            "strengths": [
+              "Response closely aligns with the supplied reference answer."
+            ],
+            "weaknesses": [],
+            "suggestions": [],
+            "claims": [],
+            "requirements": [],
+            "evaluated_with": "fallback"
+          },
+          "accuracy": {
+            "metric_name": "accuracy",
+            "score": null,
+            "evidence_coverage": 0.0,
+            "reason": "Local text similarity cannot verify factual claims. An AI review is required for this check.",
+            "review_warning": "The AI service reached its daily token limit. Wait for the limit to reset and retry. Local estimates cannot verify facts or reliably judge complex instructions.",
+            "evidence": [],
+            "strengths": [],
+            "weaknesses": [],
+            "suggestions": [
+              "Retry when AI review is available to verify these claims."
+            ],
+            "claims": [
+              {
+                "claim": "George Washington was the first President of the United States.",
+                "verdict": "UNVERIFIABLE",
+                "supported": null,
+                "score": null,
+                "evidence": null
+              }
+            ],
+            "requirements": [],
+            "evaluated_with": "fallback"
+          },
+          "groundedness": {
+            "metric_name": "groundedness",
+            "score": null,
+            "evidence_coverage": null,
+            "reason": "Groundedness cannot be verified — no source context available. Provide a source document to enable hallucination detection.",
+            "review_warning": null,
+            "evidence": [],
+            "strengths": [],
+            "weaknesses": [
+              "No context available to check claims against."
+            ],
+            "suggestions": [
+              "Upload a source document to enable groundedness evaluation."
+            ],
+            "claims": [],
+            "requirements": [],
+            "evaluated_with": "fallback"
+          },
+          "completeness": {
+            "metric_name": "completeness",
+            "score": 0.25,
+            "evidence_coverage": null,
+            "reason": "Estimated coverage: 0 covered, 1 partial, 1 missing out of 2 requirements. Completeness score: 0.25.",
+            "review_warning": "The AI service reached its daily token limit. Wait for the limit to reset and retry. Local estimates cannot verify facts or reliably judge complex instructions.",
+            "evidence": [
+              "Partially covers: Who was the first President of the United States"
+            ],
+            "strengths": [],
+            "weaknesses": [
+              "Missing: when did he serve"
+            ],
+            "suggestions": [
+              "Address the 1 missing requirement(s) to improve completeness.",
+              "Expand on 1 partially covered area(s) for full coverage."
+            ],
+            "claims": [],
+            "requirements": [
+              {
+                "requirement": "Who was the first President of the United States",
+                "status": "partial",
+                "evidence": "George Washington was the first President of the United States."
+              },
+              {
+                "requirement": "when did he serve",
+                "status": "missing",
+                "evidence": "Not addressed"
+              }
+            ],
+            "evaluated_with": "fallback"
+          }
+        },
+        "warnings": [
+          "The AI service reached its daily token limit. Wait for the limit to reset and retry. Local estimates cannot verify facts or reliably judge complex instructions."
+        ],
+        "overall_score": 0.6111,
+        "verdict": "Local Estimate",
+        "confidence": 0.5,
+        "processing_time_seconds": 0.647,
+        "strengths": [
+          "Response closely aligns with the supplied reference answer."
+        ],
+        "weaknesses": [
+          "No context available to check claims against.",
+          "Missing: when did he serve"
+        ],
+        "recommendations": [
+          "Retry when AI review is available to verify these claims.",
+          "Upload a source document to enable groundedness evaluation.",
+          "Address the 1 missing requirement(s) to improve completeness.",
+          "Expand on 1 partially covered area(s) for full coverage."
+        ]
+      }
+    }
+  ]
+}

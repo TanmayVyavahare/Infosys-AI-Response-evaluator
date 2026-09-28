@@ -9,6 +9,8 @@ Fallback path: Sentence embedding cosine similarity + NER overlap + topic simila
 
 from __future__ import annotations
 
+from app.evaluation.fallbacks.alignment import content_tokens
+
 from app.evaluation.base import BaseEvaluator, EvaluationPackage
 from app.evaluation.fallbacks.ner import NERExtractor
 from app.evaluation.fallbacks.semantic import SemanticFallback
@@ -77,6 +79,16 @@ class RelevanceEvaluator(BaseEvaluator):
         # 1. Compute composite score
         score = self._calculate_fallback_score(direct_sim, topic_sim, entity_overlap)
 
+        # Compare answer to answer, too: short answers and paraphrases often
+        # share little wording with their question. This does not verify facts.
+        reference_sim = None
+        if package.has_reference:
+            reference_sim = semantic.text_similarity(package.reference_answer, package.ai_response)
+            answer_tokens = content_tokens(package.ai_response)
+            if answer_tokens and answer_tokens <= content_tokens(package.reference_answer):
+                reference_sim = max(reference_sim, 0.9)
+            score = round(max(score, reference_sim), 4)
+
         # 2. Build explanation reason and evidence list
         reason = self._determine_relevance_reason(score)
         evidence = [
@@ -89,6 +101,11 @@ class RelevanceEvaluator(BaseEvaluator):
         strengths, weaknesses, suggestions = self._generate_feedback(
             direct_sim, topic_sim, entity_overlap, bool(q_entities)
         )
+        if reference_sim is not None:
+            evidence.append(f"Reference answer similarity: {reference_sim:.3f}")
+            if reference_sim >= self.settings.similarity_threshold_high:
+                strengths = ["Response closely aligns with the supplied reference answer."]
+                weaknesses, suggestions = [], []
 
         return MetricResult(
             metric_name=self.metric_name,

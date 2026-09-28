@@ -160,13 +160,14 @@ def test_missing_contradiction_quote_is_retried_as_unverifiable():
     assert provider.generate.await_count == 2
 
 
-def test_daily_quota_does_not_retry_early_or_hide_the_cause(monkeypatch):
+@pytest.mark.parametrize('retry_after', ['3m40.75s', '5s'])
+def test_daily_quota_does_not_retry_early_or_hide_the_cause(monkeypatch, retry_after):
     class RateLimit(Exception):
         status_code = 429
         response = SimpleNamespace(headers={})
     monkeypatch.setattr('app.services.llm_provider.get_settings', lambda: Settings(_env_file=None, groq_api_key='test-only-key', llm_model='test-model'))
     provider = GroqProvider()
-    create = AsyncMock(side_effect=RateLimit('tokens per day (TPD). Please try again in 3m40.75s.'))
+    create = AsyncMock(side_effect=RateLimit(f'tokens per day (TPD). Please try again in {retry_after}.'))
     provider._client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
     sleep = AsyncMock()
     monkeypatch.setattr('app.services.llm_provider.asyncio.sleep', sleep)

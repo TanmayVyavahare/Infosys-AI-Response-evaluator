@@ -19,6 +19,7 @@ export interface MetricResult {
   evidence_coverage?: number | null;
   score: number | null;
   reason: string;
+  review_warning?: string | null;
   evidence: string[];
   strengths: string[];
   weaknesses: string[];

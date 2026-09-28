@@ -290,6 +290,11 @@ class GroqProvider(LLMProvider):
                 except Exception as exc:
                     if getattr(exc, "status_code", None) != 429 or attempt == 7:
                         raise
+                    if "tokens per day" in str(exc).lower() or "(tpd)" in str(exc).lower():
+                        # Daily exhaustion is not a brief request burst. Return
+                        # an honest partial report rather than holding the demo
+                        # open while consuming a slowly replenishing allowance.
+                        raise
                     delay = self._retry_delay(exc, attempt)
                     if asyncio.get_running_loop().time() + delay > deadline:
                         raise

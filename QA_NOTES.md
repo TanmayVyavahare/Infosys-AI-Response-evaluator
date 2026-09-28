@@ -64,3 +64,14 @@ Run those commands in separate terminals. Credentials are loaded from backend/.e
 & backend/venv-new/Scripts/python.exe -m pytest backend/tests -q
 npm.cmd test --prefix frontend
 ```
+
+
+## Fallback reliability follow-up (2026-09-28)
+
+- Removed invented capitalized-name and extra-reference requirements. The Washington question produces two requirements.
+- Added reference-aware relevance/coverage estimates and retained parent-question context for pronoun-only subquestions.
+- Removed semantic-similarity fact certification. When AI review fails, accuracy/source support are unscored and claims remain unverifiable.
+- Added provider-failure warnings and a provisional Local Estimate verdict. Copy/JSON/print reports retain the limitations.
+- Full local suite: 91 backend tests (including actual MiniLM/FAISS) and 17 frontend tests passed; frontend lint and production build passed.
+- The real embedding model loaded successfully in the approved process environment. Cached model loading now avoids repeated network metadata checks at startup.
+- Live Washington completeness returned 1.0. A subsequent diverse 12-case live audit stopped because Groq exhausted its daily token allowance; incomplete reports are retained in quality_review/demo-audit.json and are not evidence of a completed benchmark.

@@ -18,6 +18,23 @@ const response = (body: unknown) => ({ ok: true, json: async () => body }) as Re
 
 const metric = (metric_name: string, score: number | null): MetricResult => ({ metric_name, score, reason: 'Compared with supplied evidence.', evidence: [], strengths: [], weaknesses: [], suggestions: [], claims: [], requirements: [], evaluated_with: 'llm' });
 
+it('clearly labels local estimates and preserves the limitation in copied reports', async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+  render(<ResultsPanel result={{ ...report, overall_score: .95, verdict: 'Local Estimate',
+    warnings: ['The AI service reached its usage limit. Retry later.'],
+    metrics: { relevance: { ...metric('relevance', .95), evaluated_with: 'fallback' }, accuracy: metric('accuracy', null) } }} />);
+  expect(screen.getByText('Local Estimate')).toBeTruthy();
+  expect(screen.getByText('Provisional estimate')).toBeTruthy();
+  expect(screen.getByText(/These local estimates are provisional/)).toBeTruthy();
+  expect(screen.getByRole('alert').textContent).toContain('usage limit');
+  expect(screen.queryByText('Excellent Quality')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: /Copy Report/ }));
+  await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+  expect(writeText.mock.calls[0][0]).toContain('Verdict: Local Estimate');
+  expect(writeText.mock.calls[0][0]).toContain('usage limit');
+});
+
 it('shows limited evidence and check coverage instead of misleading confidence', () => {
   render(<ResultsPanel result={{ ...report, overall_score: 1, verdict: 'Limited Evidence', confidence: .5, metrics: { relevance: metric('relevance', 1), accuracy: metric('accuracy', null), groundedness: metric('groundedness', null), completeness: metric('completeness', 1) } }} />);
   expect(screen.getByText('Limited Evidence')).toBeTruthy();

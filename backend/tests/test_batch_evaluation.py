@@ -16,7 +16,7 @@ def coordinator():
 
 def test_evaluate_batch_coordinator_empty(coordinator):
     """Empty batch should return correct empty aggregate response."""
-    result = asyncio.get_event_loop().run_until_complete(
+    result = asyncio.run(
         coordinator.evaluate_batch([])
     )
     assert result.total_count == 0
@@ -41,7 +41,7 @@ def test_evaluate_batch_coordinator_multiple(coordinator):
         ),
     ]
 
-    result = asyncio.get_event_loop().run_until_complete(
+    result = asyncio.run(
         coordinator.evaluate_batch(requests)
     )
 
@@ -67,5 +67,5 @@ def test_evaluate_batch_coordinator_multiple(coordinator):
 
     # Average metrics should calculate average score per dimension
     assert "relevance" in result.average_metrics
-    assert "accuracy" in result.average_metrics
+    assert "accuracy" not in result.average_metrics  # local mode abstains from fact checking
     assert "completeness" in result.average_metrics

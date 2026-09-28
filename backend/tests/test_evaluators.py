@@ -113,7 +113,7 @@ class TestRelevanceEvaluator:
             question=HISTORY_QA["question"],
             ai_response=HISTORY_QA["response_correct"],
         )
-        result = asyncio.get_event_loop().run_until_complete(
+        result = asyncio.run(
             relevance_evaluator.evaluate(package)
         )
         assert result.metric_name == "relevance"
@@ -128,7 +128,7 @@ class TestRelevanceEvaluator:
             question=SCIENCE_QA["question"],
             ai_response=SCIENCE_QA["response_irrelevant"],
         )
-        result = asyncio.get_event_loop().run_until_complete(
+        result = asyncio.run(
             relevance_evaluator.evaluate(package)
         )
         assert result.score is not None
@@ -141,7 +141,7 @@ class TestRelevanceEvaluator:
             question=PROGRAMMING_QA["question"],
             ai_response=PROGRAMMING_QA["response"],
         )
-        result = asyncio.get_event_loop().run_until_complete(
+        result = asyncio.run(
             relevance_evaluator.evaluate(package)
         )
         assert result.score is not None
@@ -153,7 +153,7 @@ class TestRelevanceEvaluator:
             question=EMPTY_RESPONSE["question"],
             ai_response="  ",  # Near-empty
         )
-        result = asyncio.get_event_loop().run_until_complete(
+        result = asyncio.run(
             relevance_evaluator.evaluate(package)
         )
         assert result.score is not None
@@ -165,7 +165,7 @@ class TestRelevanceEvaluator:
             question=SCIENCE_QA["question"],
             ai_response=SCIENCE_QA["response_correct"],
         )
-        result = asyncio.get_event_loop().run_until_complete(
+        result = asyncio.run(
             relevance_evaluator.evaluate(package)
         )
         assert result.metric_name == "relevance"
@@ -180,195 +180,30 @@ class TestRelevanceEvaluator:
 # ACCURACY EVALUATOR TESTS
 # ═══════════════════════════════════════════════════════════════════
 
-class TestAccuracyEvaluator:
-    """Test the Accuracy Judge Agent."""
-
-    def test_correct_facts_with_reference(self, accuracy_evaluator):
-        """Factually correct response with reference should score well."""
-        package = EvaluationPackage(
-            question=HISTORY_QA["question"],
-            ai_response=HISTORY_QA["response_correct"],
-            reference_answer=HISTORY_QA["reference"],
-        )
-        result = asyncio.get_event_loop().run_until_complete(
-            accuracy_evaluator.evaluate(package)
-        )
-        assert result.metric_name == "accuracy"
-        assert result.score is not None
-        assert result.score >= 0.4, f"Correct facts scored too low: {result.score}"
-        assert result.evaluated_with == "fallback"
-
-    def test_hallucinated_facts(self, accuracy_evaluator):
-        """Factually wrong response should score lower than correct one."""
-        package_correct = EvaluationPackage(
-            question=HISTORY_QA["question"],
-            ai_response=HISTORY_QA["response_correct"],
-            reference_answer=HISTORY_QA["reference"],
-        )
-        package_wrong = EvaluationPackage(
-            question=HISTORY_QA["question"],
-            ai_response=HISTORY_QA["response_hallucinated"],
-            reference_answer=HISTORY_QA["reference"],
-        )
-        result_correct = asyncio.get_event_loop().run_until_complete(
-            accuracy_evaluator.evaluate(package_correct)
-        )
-        result_wrong = asyncio.get_event_loop().run_until_complete(
-            accuracy_evaluator.evaluate(package_wrong)
-        )
-        # Correct should score higher than wrong
-        assert result_correct.score is not None
-        assert result_wrong.score is not None
-        assert result_correct.score > result_wrong.score, (
-            f"Correct ({result_correct.score}) should beat hallucinated ({result_wrong.score})"
-        )
-
-    def test_no_reference_no_context(self, accuracy_evaluator):
-        """Without reference or context, should return 'cannot be verified'."""
-        package = EvaluationPackage(
-            question=HISTORY_QA["question"],
-            ai_response=HISTORY_QA["response_correct"],
-        )
-        result = asyncio.get_event_loop().run_until_complete(
-            accuracy_evaluator.evaluate(package)
-        )
-        assert result.score is None, "Score should be None when no baseline exists"
-        assert "cannot be verified" in result.reason.lower()
-
-    def test_accuracy_with_context_only(self, accuracy_evaluator):
-        """When only context (no reference) is available, use context as baseline."""
-        package = EvaluationPackage(
-            question=HISTORY_QA["question"],
-            ai_response=HISTORY_QA["response_correct"],
-            retrieved_context=[
-                {"text": HISTORY_QA["context"], "score": 0.9, "metadata": {}}
-            ],
-        )
-        result = asyncio.get_event_loop().run_until_complete(
-            accuracy_evaluator.evaluate(package)
-        )
-        assert result.score is not None
-        assert result.score > 0.0
-
-    def test_claim_extraction(self, accuracy_evaluator):
-        """Claims should be extracted and individually scored."""
-        package = EvaluationPackage(
-            question=MATH_QA["question"],
-            ai_response=MATH_QA["response"],
-            reference_answer=MATH_QA["reference"],
-        )
-        result = asyncio.get_event_loop().run_until_complete(
-            accuracy_evaluator.evaluate(package)
-        )
-        assert len(result.claims) > 0, "Should extract atomic claims"
-        for claim in result.claims:
-            assert claim.claim  # Non-empty claim text
-            assert claim.score is not None
+@pytest.mark.parametrize('evaluator_name', ['accuracy_evaluator', 'groundedness_evaluator'])
+@pytest.mark.parametrize('answer', [HISTORY_QA['response_correct'], HISTORY_QA['response_hallucinated'],
+    'George Washington was not the first President of the United States.',
+    'The first President served from 1797 to 1789.'])
+def test_local_similarity_never_certifies_facts(request, evaluator_name, answer):
+    evaluator = request.getfixturevalue(evaluator_name)
+    package = EvaluationPackage(question=HISTORY_QA['question'], ai_response=answer,
+        reference_answer=HISTORY_QA['reference'], retrieved_context=[{'text': HISTORY_QA['context']}])
+    result = asyncio.run(evaluator.evaluate(package))
+    assert result.score is None
+    assert result.evidence_coverage == 0
+    assert result.claims
+    assert all(c.verdict == 'UNVERIFIABLE' and c.supported is None and c.score is None for c in result.claims)
+    assert result.review_warning
+    assert not result.strengths
 
 
-# ═══════════════════════════════════════════════════════════════════
-# GROUNDEDNESS / HALLUCINATION EVALUATOR TESTS
-# ═══════════════════════════════════════════════════════════════════
+@pytest.mark.parametrize('evaluator_name', ['accuracy_evaluator', 'groundedness_evaluator'])
+def test_missing_evidence_is_explicit(request, evaluator_name):
+    result = asyncio.run(request.getfixturevalue(evaluator_name).evaluate(
+        EvaluationPackage(question=HISTORY_QA['question'], ai_response=HISTORY_QA['response_correct'])))
+    assert result.score is None
+    assert 'cannot be verified' in result.reason.lower()
 
-class TestGroundednessEvaluator:
-    """Test the Hallucination Detection Agent."""
-
-    def test_grounded_response(self, groundedness_evaluator):
-        """Response supported by context should score well."""
-        package = EvaluationPackage(
-            question=HISTORY_QA["question"],
-            ai_response=HISTORY_QA["response_correct"],
-            retrieved_context=[
-                {"text": HISTORY_QA["context"], "score": 0.9, "metadata": {}}
-            ],
-        )
-        result = asyncio.get_event_loop().run_until_complete(
-            groundedness_evaluator.evaluate(package)
-        )
-        assert result.metric_name == "groundedness"
-        assert result.score is not None
-        assert result.score >= 0.3, f"Grounded response scored too low: {result.score}"
-
-    def test_hallucinated_response(self, groundedness_evaluator):
-        """Response with claims NOT in context should score lower."""
-        package_grounded = EvaluationPackage(
-            question=HISTORY_QA["question"],
-            ai_response=HISTORY_QA["response_correct"],
-            retrieved_context=[
-                {"text": HISTORY_QA["context"], "score": 0.9, "metadata": {}}
-            ],
-        )
-        package_hallucinated = EvaluationPackage(
-            question=HISTORY_QA["question"],
-            ai_response=HISTORY_QA["response_hallucinated"],
-            retrieved_context=[
-                {"text": HISTORY_QA["context"], "score": 0.9, "metadata": {}}
-            ],
-        )
-        result_good = asyncio.get_event_loop().run_until_complete(
-            groundedness_evaluator.evaluate(package_grounded)
-        )
-        result_bad = asyncio.get_event_loop().run_until_complete(
-            groundedness_evaluator.evaluate(package_hallucinated)
-        )
-        assert result_good.score is not None
-        assert result_bad.score is not None
-        assert result_good.score > result_bad.score, (
-            f"Grounded ({result_good.score}) should beat hallucinated ({result_bad.score})"
-        )
-
-    def test_no_context_returns_unverifiable(self, groundedness_evaluator):
-        """Without context, should return 'cannot be verified' and score=None."""
-        package = EvaluationPackage(
-            question=HISTORY_QA["question"],
-            ai_response=HISTORY_QA["response_correct"],
-        )
-        result = asyncio.get_event_loop().run_until_complete(
-            groundedness_evaluator.evaluate(package)
-        )
-        assert result.score is None
-        assert "cannot be verified" in result.reason.lower()
-
-    def test_never_returns_perfect_100(self, groundedness_evaluator):
-        """Groundedness should never return exactly 1.0 without very strong evidence."""
-        package = EvaluationPackage(
-            question=HISTORY_QA["question"],
-            ai_response=HISTORY_QA["response_correct"],
-            retrieved_context=[
-                {"text": HISTORY_QA["context"], "score": 0.9, "metadata": {}}
-            ],
-        )
-        result = asyncio.get_event_loop().run_until_complete(
-            groundedness_evaluator.evaluate(package)
-        )
-        # Should be high but capped
-        if result.score is not None:
-            assert result.score <= 0.99 or all(
-                c.score is not None and c.score >= 0.9
-                for c in result.claims
-            )
-
-    def test_claim_support_classification(self, groundedness_evaluator):
-        """Each claim should be classified as supported or unsupported."""
-        package = EvaluationPackage(
-            question=HISTORY_QA["question"],
-            ai_response=HISTORY_QA["response_hallucinated"],
-            retrieved_context=[
-                {"text": HISTORY_QA["context"], "score": 0.9, "metadata": {}}
-            ],
-        )
-        result = asyncio.get_event_loop().run_until_complete(
-            groundedness_evaluator.evaluate(package)
-        )
-        assert len(result.claims) > 0
-        # Should have at least some unsupported claims (hallucinations)
-        unsupported = [c for c in result.claims if c.supported is False]
-        assert len(unsupported) > 0, "Should detect unsupported claims in hallucinated response"
-
-
-# ═══════════════════════════════════════════════════════════════════
-# COMPLETENESS EVALUATOR TESTS
-# ═══════════════════════════════════════════════════════════════════
 
 class TestCompletenessEvaluator:
     """Test the Completeness evaluator (included for package consistency)."""
@@ -379,7 +214,7 @@ class TestCompletenessEvaluator:
             question=MULTI_PART_QA["question"],
             ai_response=MULTI_PART_QA["response_complete"],
         )
-        result = asyncio.get_event_loop().run_until_complete(
+        result = asyncio.run(
             completeness_evaluator.evaluate(package)
         )
         assert result.score is not None
@@ -395,10 +230,10 @@ class TestCompletenessEvaluator:
             question=MULTI_PART_QA["question"],
             ai_response=MULTI_PART_QA["response_incomplete"],
         )
-        result_complete = asyncio.get_event_loop().run_until_complete(
+        result_complete = asyncio.run(
             completeness_evaluator.evaluate(package_complete)
         )
-        result_incomplete = asyncio.get_event_loop().run_until_complete(
+        result_incomplete = asyncio.run(
             completeness_evaluator.evaluate(package_incomplete)
         )
         assert result_complete.score is not None
@@ -426,14 +261,13 @@ class TestCrossAgentConsistency:
             ],
         )
 
-        loop = asyncio.get_event_loop()
-        results = loop.run_until_complete(
-            asyncio.gather(
+        async def evaluate_all():
+            return await asyncio.gather(
                 relevance_evaluator.evaluate(package),
                 accuracy_evaluator.evaluate(package),
                 groundedness_evaluator.evaluate(package),
             )
-        )
+        results = asyncio.run(evaluate_all())
 
         # All should complete
         assert len(results) == 3
@@ -442,7 +276,7 @@ class TestCrossAgentConsistency:
         assert names == {"relevance", "accuracy", "groundedness"}
         # All should have scores
         for r in results:
-            assert r.score is not None
+            assert (r.score is not None) == (r.metric_name == 'relevance')
             assert r.reason
             assert r.evaluated_with == "fallback"
 
@@ -459,8 +293,30 @@ class TestCrossAgentConsistency:
             ],
         )
 
-        loop = asyncio.get_event_loop()
         for evaluator in [relevance_evaluator, accuracy_evaluator, groundedness_evaluator]:
-            result = loop.run_until_complete(evaluator.evaluate(package))
+            result = asyncio.run(evaluator.evaluate(package))
             assert result.reason, f"{result.metric_name} has empty reason"
             assert len(result.reason) > 10, f"{result.metric_name} reason too short"
+
+
+@pytest.mark.parametrize('question,answer,reference', [
+    (HISTORY_QA['question'], 'George Washington was the first President of the United States, serving from 1789 to 1797.', HISTORY_QA['reference']),
+    ('What is the capital of France?', 'Paris.', 'Paris is the capital of France.'),
+    ('What is 2 + 2?', '4', '4'),
+])
+def test_answer_shaped_reference_improves_local_relevance(relevance_evaluator, question, answer, reference):
+    result = asyncio.run(relevance_evaluator.evaluate(
+        EvaluationPackage(question=question, ai_response=answer, reference_answer=reference)))
+    assert result.score >= .8
+
+
+def test_screenshot_answer_covers_both_requirements(completeness_evaluator):
+    package = EvaluationPackage(question=HISTORY_QA['question'],
+        ai_response='George Washington was the first President of the United States, serving from 1789 to 1797.',
+        reference_answer=HISTORY_QA['reference'])
+    full = asyncio.run(completeness_evaluator.evaluate(package))
+    assert len(full.requirements) == 2
+    assert full.score == 1.0
+    package.ai_response = 'George Washington was the first President of the United States.'
+    partial = asyncio.run(completeness_evaluator.evaluate(package))
+    assert partial.score < full.score

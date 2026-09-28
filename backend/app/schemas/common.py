@@ -49,6 +49,7 @@ class MetricResult(BaseModel):
     )
     evidence_coverage: Optional[float] = Field(default=None, ge=0, le=1, description="Fraction of accuracy claims that the supplied evidence can verify")
     reason: str = Field(description="Human-readable explanation of the score")
+    review_warning: Optional[str] = Field(default=None, description="Why a check used a local estimate or could not verify facts")
     evidence: list[str] = Field(
         default_factory=list, description="Supporting evidence for the score"
     )

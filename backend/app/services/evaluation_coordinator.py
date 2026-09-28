@@ -141,7 +141,9 @@ class EvaluationCoordinator:
 
         return EvaluationResponse(
             metrics=metrics,
-            warnings=package.metadata.get("warnings", []) + (
+            warnings=package.metadata.get("warnings", []) + list(dict.fromkeys(
+                m.review_warning for m in metrics.values() if m.review_warning
+            )) + (
                 ["The reference and source disagree. Resolve the conflicting evidence before relying on the score."] if verdict == "Conflicting Evidence" else []
             ) + (
                 ["The overall score covers only assessable checks; it does not verify unsupported facts."] if verdict == "Limited Evidence" else []
@@ -150,9 +152,9 @@ class EvaluationCoordinator:
             verdict=verdict,
             confidence=confidence,
             processing_time_seconds=round(processing_time, 3),
-            strengths=all_strengths[:8],
-            weaknesses=all_weaknesses[:8],
-            recommendations=all_recommendations[:8],
+            strengths=list(dict.fromkeys(all_strengths))[:8],
+            weaknesses=list(dict.fromkeys(all_weaknesses))[:8],
+            recommendations=list(dict.fromkeys(all_recommendations))[:8],
         )
 
     async def _build_package(
@@ -220,6 +222,11 @@ class EvaluationCoordinator:
 
         # Weighted score calculation
         overall_score = self._calculate_weighted_score(available_scores)
+
+        # Heuristic estimates must not trigger authoritative "Incomplete" or
+        # "Excellent" verdicts, including mixed AI/local reviews.
+        if any(m.evaluated_with == "fallback" and m.score is not None for m in metrics.values()):
+            return round(overall_score, 4), "Local Estimate", self._calculate_confidence(available_scores, metrics)
 
         # Labels distinguish missing evidence from demonstrated contradiction.
         accuracy = metrics.get("accuracy")

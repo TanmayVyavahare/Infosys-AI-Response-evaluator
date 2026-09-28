@@ -33,6 +33,7 @@ function getVerdictBadge(verdict: string) {
     case 'Off-Topic':
       return { bg: 'bg-purple-100 text-purple-800 border-purple-200', title: 'Off-Topic Response', icon: '🎯' };
     case 'Limited Evidence':
+    case 'Local Estimate':
     case 'Conflicting Evidence':
     case 'Unsupported Claims':
     case 'Incomplete':
@@ -70,7 +71,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
   const metrics = result.metrics ?? {};
   const scoredCount = Object.values(metrics).filter(metric => metric.score != null).length;
   const unavailableCount = Object.values(metrics).filter(metric => metric.score == null).length;
-  const limitedAssessment = scoredCount < 4 || ['Limited Evidence', 'Conflicting Evidence'].includes(result.verdict);
+  const limitedAssessment = scoredCount < 4 || ['Limited Evidence', 'Conflicting Evidence', 'Local Estimate'].includes(result.verdict);
 
   const verdictConfig = getVerdictBadge(result.verdict);
 
@@ -104,6 +105,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
       return "AI response provides basic necessary information, but holds minor omissions or partially covered requirements.";
     }
     const summaries: Record<string, string> = {
+      'Local Estimate': 'AI review was unavailable for some checks. These local estimates are provisional; factual claims have not been verified by those checks. Retry for a full AI review.',
       'Factually Unreliable': 'The supplied evidence contradicts important claims. Review the incorrect claims below.',
       'Critical Hallucination': 'Important claims were flagged by the source check. Inspect the evidence before drawing a conclusion.',
       'Unsupported Claims': 'The supplied source does not support the response. Missing support does not by itself prove a claim false.',
@@ -228,7 +230,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
             strokeWidth={10}
           />
           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-2 block">
-            {limitedAssessment ? 'Available-check score' : 'Overall quality score'}
+            {result.verdict === 'Local Estimate' ? 'Provisional estimate' : limitedAssessment ? 'Available-check score' : 'Overall quality score'}
           </span>
         </div>
 
@@ -298,6 +300,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
                       {titles[key] || key}
                     </h5>
                     <span className="text-[10px] text-slate-500 leading-none">{summaries[key]}</span>
+                    {metric.evaluated_with === 'fallback' && metric.score != null && <p className="mt-2 text-xs font-semibold text-amber-800">Local estimate</p>}
                   </div>
                   
                   {/* Small circular gauge representation */}
@@ -376,7 +379,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
                         {titles[key]}
                       </h5>
                       <span className="text-xs text-slate-500 font-medium">
-                        {metric.score == null ? 'Not scored' : metric.evaluated_with === 'error' ? 'Check unavailable' : metric.evaluated_with === 'llm' ? 'AI review' : 'Local review'}
+                        {metric.score == null ? 'Not scored' : metric.evaluated_with === 'error' ? 'Check unavailable' : metric.evaluated_with === 'llm' ? 'AI review' : 'Local estimate'}
                       </span>
                     </div>
                   </div>
@@ -453,7 +456,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
                             ))}
                           </ul>
                         ) : (
-                          <p className="text-xs text-slate-500 italic">No critical weaknesses identified.</p>
+                          <p className="text-xs text-slate-500 italic">{limitedAssessment ? 'This assessment is limited. Review unavailable checks before drawing conclusions.' : 'No critical weaknesses identified.'}</p>
                         )}
                       </div>
 
@@ -634,7 +637,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
                 ))}
               </ul>
             ) : (
-              <p className="text-xs text-slate-500 italic font-medium">No critical weaknesses identified.</p>
+              <p className="text-xs text-slate-500 italic font-medium">{limitedAssessment ? 'This assessment is limited. Review unavailable checks before drawing conclusions.' : 'No critical weaknesses identified.'}</p>
             )}
           </div>
         </div>

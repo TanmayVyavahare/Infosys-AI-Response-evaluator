@@ -2,7 +2,7 @@
 
 Determines whether the response covers every requested requirement
 from the question. The question is the PRIMARY source; reference
-answer only enriches extracted requirements.
+answer helps interpret explicitly requested requirements.
 
 LLM path: Completeness prompt → coverage assessment.
 Fallback path: Requirement extraction + semantic presence checking.
@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from app.evaluation.base import BaseEvaluator, EvaluationPackage
 from app.evaluation.fallbacks.concepts import ConceptExtractor
+from app.evaluation.fallbacks.alignment import reference_coverage
 from app.evaluation.fallbacks.semantic import SemanticFallback
 from app.evaluation.prompts.completeness import (
     COMPLETENESS_SYSTEM_MESSAGE,
@@ -26,8 +27,8 @@ logger = get_logger(__name__)
 class CompletenessEvaluator(BaseEvaluator):
     """Evaluate the completeness of an AI response.
 
-    Extracts requirements from the question (primary) and optionally
-    enriches from the reference answer. Then checks each requirement
+    Extracts requirements from the question and uses the reference as
+    an answer-shaped alignment signal. Then checks each requirement
     against the response: Covered / Partial / Missing.
     """
 
@@ -90,7 +91,8 @@ class CompletenessEvaluator(BaseEvaluator):
         # 3. Assess each requirement
         requirement_results = [
             self._verify_completeness_requirement(
-                req["text"], response_sentences, package.ai_response, semantic
+                req["text"], response_sentences, package.ai_response, semantic,
+                package.reference_answer, package.question,
             )
             for req in requirements
         ]
@@ -124,6 +126,8 @@ class CompletenessEvaluator(BaseEvaluator):
         response_sentences: list[str],
         ai_response: str,
         semantic: SemanticFallback,
+        reference: str | None = None,
+        question: str | None = None,
     ) -> RequirementCoverage:
         """Verify if a single requirement is covered in the AI response."""
         # Find best matching sentence in response
@@ -134,6 +138,20 @@ class CompletenessEvaluator(BaseEvaluator):
 
         # Use maximum of sentence-level similarity and full-text check
         coverage_score = max(best_sim, full_sim * 0.9)
+
+        # A question and its answer need not have high cosine similarity. Match
+        # against an answer-shaped reference as well. Require content coverage
+        # so a similar sentence missing names or numbers is not enough.
+        if reference:
+            ref_sim = semantic.text_similarity(reference, ai_response)
+            # Keep the parent question to resolve short clauses such as
+            # "when did he serve?", which lose their subject when split.
+            question_alignment = semantic.text_similarity(question or req_text, reference)
+            if (question_alignment >= 0.3 and ref_sim >= 0.85
+                    and reference_coverage(reference, ai_response) >= 0.9):
+                coverage_score = max(coverage_score, 0.95)
+                best_match = ai_response
+                best_sim = ref_sim
 
         if coverage_score >= self.settings.similarity_threshold_high:
             status = "covered"
@@ -173,7 +191,7 @@ class CompletenessEvaluator(BaseEvaluator):
                 weaknesses.append(f"Missing: {r.requirement[:60]}")
 
         reason = (
-            f"Coverage: {covered_count} covered, {partial_count} partial, "
+            f"Estimated coverage: {covered_count} covered, {partial_count} partial, "
             f"{missing_count} missing out of {total} requirements. "
             f"Completeness score: {score:.2f}."
         )

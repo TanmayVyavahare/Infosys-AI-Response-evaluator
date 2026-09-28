@@ -34,7 +34,12 @@ def _get_model() -> "SentenceTransformer":
 
         settings = get_settings()
         logger.info("Loading embedding model: %s", settings.embedding_model_name)
-        _model = SentenceTransformer(settings.embedding_model_name)
+        # Reuse an installed model without repeated network metadata checks.
+        # A first installation still downloads the public model normally.
+        try:
+            _model = SentenceTransformer(settings.embedding_model_name, local_files_only=True)
+        except OSError:
+            _model = SentenceTransformer(settings.embedding_model_name)
         logger.info("Embedding model loaded successfully")
     return _model
 
